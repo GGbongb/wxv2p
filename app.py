@@ -32,7 +32,7 @@ class VideoDragDropWindow(QMainWindow):
         layout.addWidget(self.drop_area)
 
         # 添加按钮
-        self.process_button = QPushButton("点击开始", self)
+        self.process_button = QPushButton("点击开始吧", self)
         self.process_button.setStyleSheet("""
             QPushButton {
                 background-color: #f1c40f;
