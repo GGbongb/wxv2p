@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import (QWidget, QLabel, QVBoxLayout, QPushButton, 
                              QHBoxLayout, QFrame)
-from PyQt5.QtCore import Qt, QSize
+from PyQt5.QtCore import Qt, QSize, QTimer
 from PyQt5.QtGui import QPixmap, QImage, QIcon,QColor 
 
 class ImageViewer(QWidget):
@@ -42,14 +42,17 @@ class ImageViewer(QWidget):
             self.image_layout.addWidget(label)
         main_layout.addWidget(self.image_frame, 1)  # 图片区域占据剩余空间
 
-                # 添加选择框
+        # 添加选择框
         self.selection_frame = QFrame(self.image_frame)
         self.selection_frame.setStyleSheet("border: 3px solid #E74C3C; border-radius: 10px; background: transparent;")
-        self.selection_frame.raise_()
+        self.selection_frame.hide()  # 初始时隐藏选择框
 
         self.setLayout(main_layout)
         self.show_images()
         self.setFocusPolicy(Qt.StrongFocus)
+
+                # 使用 QTimer 延迟更新选择框位置
+        QTimer.singleShot(100, self.update_selection_frame)
 
         # 右侧布局（箭头 + 按钮）
         right_layout = QVBoxLayout()
@@ -105,11 +108,14 @@ class ImageViewer(QWidget):
                 label.setPixmap(scaled_pixmap)
             else:
                 label.clear()
-        self.update_selection_frame()
 
     def update_selection_frame(self):
-        selected_label = self.image_labels[self.selected_image]
-        self.selection_frame.setGeometry(selected_label.geometry())
+        if self.images:
+            selected_label = self.image_labels[self.selected_image]
+            self.selection_frame.setGeometry(selected_label.geometry())
+            self.selection_frame.show()  # 显示选择框
+        else:
+            self.selection_frame.hide()  # 如果没有图片，隐藏选择框
 
     def show_previous(self):
         if self.selected_image == 1:
@@ -117,6 +123,7 @@ class ImageViewer(QWidget):
         elif self.current_index > 0:
             self.current_index -= 1
         self.show_images()
+        self.update_selection_frame()
 
     def show_next(self):
         if self.selected_image == 0 and self.current_index + 1 < len(self.images):
@@ -125,6 +132,7 @@ class ImageViewer(QWidget):
             self.current_index += 1
             self.selected_image = 0
         self.show_images()
+        self.update_selection_frame()
    
     def delete_current(self):
         if self.images:
@@ -133,6 +141,7 @@ class ImageViewer(QWidget):
                 self.current_index = max(0, len(self.images) - 2)
                 self.selected_image = 0
             self.show_images()
+            self.update_selection_frame()
 
     def go_to_next_step(self):
         print("进入下一步")
