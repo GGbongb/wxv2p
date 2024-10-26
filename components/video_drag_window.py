@@ -11,7 +11,7 @@ class VideoDragDropWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("微信聊天记录转图片工具")
-        self.setGeometry(100, 100, 800, 600)
+        self.setGeometry(100, 100, 1920,1500)
 
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
