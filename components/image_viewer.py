@@ -13,18 +13,22 @@ class ImageViewer(QWidget):
 
     def initUI(self):
         self.setStyleSheet("background-color: #FFF0E0;")  # 暖色背景
-        self.setFixedSize(1920,1500)  # 与 video_drag_window 保持一致的大小
+        self.setFixedSize(1920, 1500)  # 与 video_drag_window 保持一致的大小
 
         main_layout = QHBoxLayout()
         
         # 左侧布局（箭头 + 按钮）
         left_layout = QVBoxLayout()
+        left_layout.addStretch(1)  # 添加弹性空间将箭头推到中间
+
         self.prev_button = QPushButton()
         self.prev_button.setIcon(QIcon("resources/left_arrow.png"))
         self.prev_button.setIconSize(QSize(50, 50))
         self.prev_button.setStyleSheet("background: transparent;")
         self.prev_button.clicked.connect(self.show_previous)
         left_layout.addWidget(self.prev_button, alignment=Qt.AlignCenter)
+        
+        left_layout.addStretch(1)  # 添加弹性空间将箭头推到中间
         
         self.delete_button = self.create_vertical_button("空格\n删除", "#F1C40F")
         self.delete_button.clicked.connect(self.delete_current)
@@ -47,21 +51,18 @@ class ImageViewer(QWidget):
         self.selection_frame.setStyleSheet("border: 3px solid #E74C3C; border-radius: 10px; background: transparent;")
         self.selection_frame.hide()  # 初始时隐藏选择框
 
-        self.setLayout(main_layout)
-        self.show_images()
-        self.setFocusPolicy(Qt.StrongFocus)
-
-                # 使用 QTimer 延迟更新选择框位置
-        QTimer.singleShot(100, self.update_selection_frame)
-
         # 右侧布局（箭头 + 按钮）
         right_layout = QVBoxLayout()
+        right_layout.addStretch(1)  # 添加弹性空间将箭头推到中间
+
         self.next_button = QPushButton()
         self.next_button.setIcon(QIcon("resources/right_arrow.png"))
         self.next_button.setIconSize(QSize(50, 50))
         self.next_button.setStyleSheet("background: transparent;")
         self.next_button.clicked.connect(self.show_next)
         right_layout.addWidget(self.next_button, alignment=Qt.AlignCenter)
+        
+        right_layout.addStretch(1)  # 添加弹性空间将箭头推到中间
         
         self.next_step_button = self.create_vertical_button("下一步", "#F1C40F")
         self.next_step_button.clicked.connect(self.go_to_next_step)
@@ -73,6 +74,9 @@ class ImageViewer(QWidget):
         self.show_images()
         self.setFocusPolicy(Qt.StrongFocus)
 
+        # 使用 QTimer 延迟更新选择框位置
+        QTimer.singleShot(100, self.update_selection_frame)
+
     def create_vertical_button(self, text, color):
         button = QPushButton("\n".join(text))
         button.setStyleSheet(f"""
@@ -82,7 +86,7 @@ class ImageViewer(QWidget):
                 border: none;
                 padding: 10px;
                 border-radius: 5px;
-                font-size: 16px;
+                font-size: 25px;
                 font-weight: bold;
             }}
             QPushButton:hover {{
