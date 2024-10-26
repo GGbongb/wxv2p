@@ -8,6 +8,7 @@ class ImageViewer(QWidget):
         super().__init__()
         self.images = [QImage(frame.data, frame.shape[1], frame.shape[0], QImage.Format_RGB888).rgbSwapped() for frame in frames]
         self.current_index = 0
+        self.selected_image = 0  # 0 表示左侧图片被选中，1 表示右侧图片被选中
         self.initUI()
 
     def initUI(self):
@@ -41,6 +42,15 @@ class ImageViewer(QWidget):
             self.image_layout.addWidget(label)
         main_layout.addWidget(self.image_frame, 1)  # 图片区域占据剩余空间
 
+                # 添加选择框
+        self.selection_frame = QFrame(self.image_frame)
+        self.selection_frame.setStyleSheet("border: 3px solid #E74C3C; border-radius: 10px; background: transparent;")
+        self.selection_frame.raise_()
+
+        self.setLayout(main_layout)
+        self.show_images()
+        self.setFocusPolicy(Qt.StrongFocus)
+
         # 右侧布局（箭头 + 按钮）
         right_layout = QVBoxLayout()
         self.next_button = QPushButton()
@@ -58,6 +68,7 @@ class ImageViewer(QWidget):
 
         self.setLayout(main_layout)
         self.show_images()
+        self.setFocusPolicy(Qt.StrongFocus)
 
     def create_vertical_button(self, text, color):
         button = QPushButton("\n".join(text))
@@ -97,27 +108,30 @@ class ImageViewer(QWidget):
         self.update_selection_frame()
 
     def update_selection_frame(self):
-        for i, label in enumerate(self.image_labels):
-            if i == 0:  # 只为左侧图片添加边框
-                label.setStyleSheet("border: 3px solid #E74C3C; border-radius: 10px;")
-            else:
-                label.setStyleSheet("")
+        selected_label = self.image_labels[self.selected_image]
+        self.selection_frame.setGeometry(selected_label.geometry())
 
     def show_previous(self):
-        if self.current_index > 0:
+        if self.selected_image == 1:
+            self.selected_image = 0
+        elif self.current_index > 0:
             self.current_index -= 1
-            self.show_images()
+        self.show_images()
 
     def show_next(self):
-        if self.current_index < len(self.images) - 1:
+        if self.selected_image == 0 and self.current_index + 1 < len(self.images):
+            self.selected_image = 1
+        elif self.current_index + 2 < len(self.images):
             self.current_index += 1
-            self.show_images()
-
+            self.selected_image = 0
+        self.show_images()
+   
     def delete_current(self):
         if self.images:
-            del self.images[self.current_index]
-            if self.current_index >= len(self.images):
-                self.current_index = max(0, len(self.images) - 1)
+            del self.images[self.current_index + self.selected_image]
+            if self.current_index + self.selected_image >= len(self.images):
+                self.current_index = max(0, len(self.images) - 2)
+                self.selected_image = 0
             self.show_images()
 
     def go_to_next_step(self):
