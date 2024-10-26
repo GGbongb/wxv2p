@@ -37,6 +37,7 @@ class ImageViewer(QWidget):
         main_layout.addLayout(left_layout)
 
         # 图片显示区域
+        image_area_layout = QVBoxLayout()
         self.image_frame = QFrame()
         self.image_frame.setStyleSheet("background-color: white;")
         self.image_layout = QHBoxLayout(self.image_frame)
@@ -44,7 +45,15 @@ class ImageViewer(QWidget):
         for label in self.image_labels:
             label.setAlignment(Qt.AlignCenter)
             self.image_layout.addWidget(label)
-        main_layout.addWidget(self.image_frame, 1)  # 图片区域占据剩余空间
+        image_area_layout.addWidget(self.image_frame, 1)  # 图片区域占据剩余空间
+
+        # 添加图片序号标签
+        self.image_count_label = QLabel()
+        self.image_count_label.setAlignment(Qt.AlignCenter)
+        self.image_count_label.setStyleSheet("color: #2c3e50; font-size: 18px; font-weight: bold;")
+        image_area_layout.addWidget(self.image_count_label)
+
+        main_layout.addLayout(image_area_layout, 1)
 
         # 添加选择框
         self.selection_frame = QFrame(self.image_frame)
@@ -76,6 +85,11 @@ class ImageViewer(QWidget):
 
         # 使用 QTimer 延迟更新选择框位置
         QTimer.singleShot(100, self.update_selection_frame)
+
+    def update_image_count_label(self):
+            current_image = self.current_index + self.selected_image + 1
+            total_images = len(self.images)
+            self.image_count_label.setText(f"第 {current_image} 张 / 共计 {total_images} 张")
 
     def create_vertical_button(self, text, color):
         button = QPushButton("\n".join(text))
@@ -112,6 +126,7 @@ class ImageViewer(QWidget):
                 label.setPixmap(scaled_pixmap)
             else:
                 label.clear()
+            self.update_image_count_label()
 
     def update_selection_frame(self):
         if self.images:
@@ -128,6 +143,7 @@ class ImageViewer(QWidget):
             self.current_index -= 1
         self.show_images()
         self.update_selection_frame()
+        self.update_image_count_label()
 
     def show_next(self):
         if self.selected_image == 0 and self.current_index + 1 < len(self.images):
@@ -137,7 +153,8 @@ class ImageViewer(QWidget):
             self.selected_image = 0
         self.show_images()
         self.update_selection_frame()
-   
+        self.update_image_count_label()
+
     def delete_current(self):
         if self.images:
             del self.images[self.current_index + self.selected_image]
@@ -146,7 +163,8 @@ class ImageViewer(QWidget):
                 self.selected_image = 0
             self.show_images()
             self.update_selection_frame()
-
+            self.update_image_count_label()
+            
     def go_to_next_step(self):
         print("进入下一步")
 
