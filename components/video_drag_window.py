@@ -1,11 +1,12 @@
 from PyQt5.QtWidgets import (QMainWindow, QLabel, QVBoxLayout, QWidget,
-                             QPushButton, QMessageBox, QSizePolicy)
+                             QPushButton, QMessageBox, QSizePolicy, QTextEdit)
 from PyQt5.QtCore import Qt, QPropertyAnimation, QEasingCurve
 from PyQt5.QtGui import QDragEnterEvent, QDropEvent
 
 from .fun_progress_bar import FunProgressBar
 from .video_process_thread import VideoProcessThread
 from .image_viewer import ImageViewer
+from components.video_process_thread import VideoProcessThread
 
 class VideoDragDropWindow(QMainWindow):
     def __init__(self):
@@ -88,6 +89,17 @@ class VideoDragDropWindow(QMainWindow):
         self.thread = VideoProcessThread(self.video_path)
         self.thread.progress.connect(self.update_progress)
         self.thread.finished.connect(self.show_images)
+        
+        # 添加日志显示功能
+        self.log_display = QTextEdit(self)
+        self.log_display.setReadOnly(True)
+        self.layout.addWidget(self.log_display)
+
+        def display_log(message):
+            self.log_display.append(message)
+
+        self.thread.log_message.connect(display_log)
+        
         self.thread.start()
 
     def update_progress(self, value):
