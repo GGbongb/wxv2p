@@ -42,8 +42,9 @@ class VideoProcessThread(QThread):
         # 使用固定值替代检测
         fixed_top_height, fixed_bottom_height = self.fixed_top_height, self.fixed_bottom_height
         self.log(f"Using fixed top height: {fixed_top_height}, bottom height: {fixed_bottom_height}")
-        overlap = 120
-        tolerance = 100  # 容忍度，单位为像素
+        overlap = 150
+        tolerance = 50  # 容忍度，单位为像素
+        min_new_content = 300  # 最小新内容高度，单位为像素
 
         cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
         last_content = None
@@ -74,7 +75,7 @@ class VideoProcessThread(QThread):
                 new_content_start = self.find_new_content_start(content_frame, last_content, tolerance)
                 self.log(f"Frame {i} - Overlap region: {overlap_region}, New content start: {new_content_start}")
                 
-                if new_content_start is not None:
+                if new_content_start is not None and new_content_start < content_frame.shape[0] - min_new_content:
                     start_y = max(fixed_top_height, new_content_start + fixed_top_height - overlap)
                     cropped_frame = self.crop_frame(full_frame, start_y)
                     if cropped_frame.shape[0] > fixed_top_height + overlap:
@@ -89,8 +90,8 @@ class VideoProcessThread(QThread):
                         self.log(f"Frame {i} skipped, not enough new content")
                         self.save_debug_frame(full_frame, i, "Skipped_ShortContent", fixed_top_height, fixed_bottom_height, last_non_empty_content_end, overlap_region, new_content_start + fixed_top_height)
                 else:
-                    self.log(f"Frame {i} skipped, no new content detected")
-                    self.save_debug_frame(full_frame, i, "Skipped_NoNewContent", fixed_top_height, fixed_bottom_height, last_non_empty_content_end, overlap_region)
+                    self.log(f"Frame {i} skipped, no significant new content detected")
+                    self.save_debug_frame(full_frame, i, "Skipped_NoSignificantNewContent", fixed_top_height, fixed_bottom_height, last_non_empty_content_end, overlap_region, new_content_start + fixed_top_height if new_content_start is not None else None)
 
             self.progress.emit(int((i + 1) / total_frames * 100))
 
