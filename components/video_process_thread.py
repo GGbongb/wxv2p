@@ -21,7 +21,7 @@ class VideoProcessThread(QThread):
         self.fixed_top_height = 120
         self.fixed_bottom_height = 70
         self.repeat_check_height = 100  # 重复检测区域的高度
-        self.similarity_threshold = 0.85  # 降低相似度阈值以增加容忍度
+        self.similarity_threshold = 1.85  # 降低相似度阈值以增加容忍度
         self.consecutive_frames_threshold = 3  # 连续相似帧数阈值
 
     def setup_logging(self):
@@ -77,6 +77,9 @@ class VideoProcessThread(QThread):
                 self.save_debug_frame(frame, i, f"Skipped_{similarity:.4f}", self.fixed_top_height, self.fixed_bottom_height)
 
             self.progress.emit(int((i + 1) / total_frames * 100))
+
+            if len(frames) > 500:
+                break
 
         cap.release()
         self.log(f"Processing completed. Total frames captured: {len(frames)}")
