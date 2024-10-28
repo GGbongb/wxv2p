@@ -186,35 +186,33 @@ class VideoProcessThread(QThread):
     def save_comparison_image(self, comparison_image, frame_number, status):
         try:
             extended_height = self.check_height
-            width = comparison_image.shape[1]
+            # 获取单个区域的宽度（总宽度的一半）
+            single_width = comparison_image.shape[1] // 2
             
             # 创建白色背景
-            full_comparison = np.ones((extended_height + 50, width, 3), dtype=np.uint8) * 255
+            full_comparison = np.ones((extended_height + 50, comparison_image.shape[1], 3), dtype=np.uint8) * 255
             
             # 复制检查区域图像
             if hasattr(self, 'last_region') and hasattr(self, 'current_region'):
-                full_comparison[0:extended_height, :width] = self.last_region
-                full_comparison[0:extended_height, width:] = self.current_region
+                # 正确分配左右两半部分
+                full_comparison[0:extended_height, :single_width] = self.last_region
+                full_comparison[0:extended_height, single_width:] = self.current_region
                 
                 # 在检查区域上标记实际重复区域（蓝色矩形）
-                if hasattr(self, 'last_region') and hasattr(self, 'current_region'):
-                    # 标记 Last Repeat 中的重复区域
-                    cv2.rectangle(full_comparison, 
-                                (0, extended_height - self.check_height), 
-                                (width, extended_height), 
-                                (255, 0, 0), 2)
-                    
-                    # 标记 Current Top 中的重复区域
-                    cv2.rectangle(full_comparison, 
-                                (0, 0), 
-                                (width, self.check_height), 
-                                (255, 0, 0), 2)
+                cv2.rectangle(full_comparison, 
+                            (0, 0), 
+                            (single_width, extended_height), 
+                            (255, 0, 0), 2)
+                
+                cv2.rectangle(full_comparison, 
+                            (single_width, 0), 
+                            (comparison_image.shape[1], extended_height), 
+                            (255, 0, 0), 2)
             
             # 添加标注
             font = cv2.FONT_HERSHEY_SIMPLEX
             cv2.putText(full_comparison, "Last Repeat", (10, 30), font, 1, (0, 255, 0), 2)
-            cv2.putText(full_comparison, "Current Top", (10, 30), font, 1, (0, 255, 0), 2)
-            cv2.putText(full_comparison, "Matched Region", (10, extended_height - 5), font, 0.7, (255, 0, 0), 2)
+            cv2.putText(full_comparison, "Current Top", (single_width + 10, 30), font, 1, (0, 255, 0), 2)
             cv2.putText(full_comparison, status, (10, extended_height + 30), font, 0.7, (0, 0, 255), 2)
             
             filename = f"{self.repeat_region_dir}/comparison_{frame_number:04d}_{status}.jpg"
