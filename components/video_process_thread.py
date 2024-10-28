@@ -43,7 +43,7 @@ class VideoProcessThread(QThread):
 
         frames = []
         last_repeat_region = None
-        consecutive_similar_frames = 0
+
 
         for i in range(total_frames):
             ret, frame = cap.read()
@@ -62,15 +62,18 @@ class VideoProcessThread(QThread):
             similarity, comparison_image = self.check_similarity(last_repeat_region, current_top_region)
             
             is_similar = similarity >= self.similarity_threshold
-
-
             status = f"Similar_{similarity:.4f}" if is_similar else f"Different_{similarity:.4f}"
             self.save_comparison_image(comparison_image, i, status)
             
             if is_similar:
-                consecutive_similar_frames += 1
+                frames.append(frame)
+                last_repeat_region = self.get_repeat_region(frame)
+                self.log(f"Added new frame {len(frames)}, similarity: {similarity:.4f}")
+                self.save_debug_frame(frame, i, f"Frame_{len(frames)}", self.fixed_top_height, self.fixed_bottom_height)
+                self.save_repeat_region(last_repeat_region, i, f"NewRepeat_{len(frames)}")
             else:
-                consecutive_similar_frames = 0
+                self.save_debug_frame(frame, i, f"Skipped_{similarity:.4f}", self.fixed_top_height, self.fixed_bottom_height)
+ 
 
             self.progress.emit(int((i + 1) / total_frames * 100))
 
