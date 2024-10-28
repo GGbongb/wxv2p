@@ -21,7 +21,7 @@ class VideoProcessThread(QThread):
         self.fixed_top_height = 120
         self.fixed_bottom_height = 70
         self.check_height = 180  # 检查区域的总高度
-        self.similarity_threshold = 0.7  # 相似度阈值
+        self.similarity_threshold = 0.8  # 相似度阈值
 
     def setup_logging(self):
         self.logger = logging.getLogger('VideoProcessThread')
@@ -44,18 +44,17 @@ class VideoProcessThread(QThread):
 
     def check_similarity(self, last_regions, current_regions):
         try:
-            last_region = last_regions[0]  # 只需要完整区域
+            last_region = last_regions[0]
             current_region = current_regions[0]
             
-            # 保存引用供显示使用
             self.last_region = last_region
             self.current_region = current_region
             
-            # 计算区域相似度
+            # 计算相似度
             similarity = self.compute_similarity(last_region, current_region)
             
-            # 创建对比图像
-            comparison_image = np.hstack((last_region, current_region))
+            # 创建对比图像，并标记相似块
+            comparison_image = self.create_comparison_image(last_region, current_region)
             
             return similarity, similarity, comparison_image
 
@@ -66,7 +65,7 @@ class VideoProcessThread(QThread):
             raise
 
     def compute_similarity(self, img1, img2):
-        """计算两个图像的相似度"""
+        """计算两个图像的相似度，处理滚动截断问题"""
         if img1 is None or img2 is None:
             raise ValueError("One of the input images is None")
         
@@ -81,20 +80,81 @@ class VideoProcessThread(QThread):
         if len(img2.shape) == 3:
             img2 = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)
         
-        # 应用高斯模糊减少噪声
-        img1 = cv2.GaussianBlur(img1, (3, 3), 0)
-        img2 = cv2.GaussianBlur(img2, (3, 3), 0)
+        # 应用自适应阈值，减少光照影响
+        img1_thresh = cv2.adaptiveThreshold(img1, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
+                                          cv2.THRESH_BINARY, 11, 2)
+        img2_thresh = cv2.adaptiveThreshold(img2, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
+                                          cv2.THRESH_BINARY, 11, 2)
         
-        # 模板匹配
-        result = cv2.matchTemplate(img1, img2, cv2.TM_CCOEFF_NORMED)
-        template_sim = np.max(result)
+        # 分块比较，处理滚动截断问题
+        block_height = 30  # 每个块的高度
+        num_blocks = img1.shape[0] // block_height
+        block_similarities = []
         
-        # 直方图比较
-        hist1 = cv2.calcHist([img1], [0], None, [256], [0, 256])
-        hist2 = cv2.calcHist([img2], [0], None, [256], [0, 256])
-        hist_sim = cv2.compareHist(hist1, hist2, cv2.HISTCMP_CORREL)
+        for i in range(num_blocks):
+            start_y = i * block_height
+            end_y = start_y + block_height
+            
+            # 提取对应的块
+            block1 = img1_thresh[start_y:end_y, :]
+            block2 = img2_thresh[start_y:end_y, :]
+            
+            # 计算块的相似度
+            # 1. 模板匹配
+            result = cv2.matchTemplate(block1, block2, cv2.TM_CCOEFF_NORMED)
+            template_sim = np.max(result)
+            
+            # 2. 结构相似度
+            mse = np.mean((block1.astype(float) - block2.astype(float)) ** 2)
+            if mse == 0:
+                ssim = 1.0
+            else:
+                ssim = 1.0 / (1.0 + mse/10000)
+            
+            # 3. 特征点匹配
+            orb = cv2.ORB_create()
+            kp1, des1 = orb.detectAndCompute(block1, None)
+            kp2, des2 = orb.detectAndCompute(block2, None)
+            
+            feature_sim = 0
+            if des1 is not None and des2 is not None and len(kp1) > 0 and len(kp2) > 0:
+                bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
+                matches = bf.match(des1, des2)
+                feature_sim = len(matches) / max(len(kp1), len(kp2))
+            
+            # 综合相似度
+            block_sim = (template_sim * 0.4 + ssim * 0.4 + feature_sim * 0.2)
+            block_similarities.append(block_sim)
         
-        return (template_sim + hist_sim) / 2
+        # 计算最终相似度
+        # 1. 取最高连续块的平均相似度
+        max_consecutive_sim = 0
+        current_consecutive_sim = 0
+        consecutive_count = 0
+        
+        for sim in block_similarities:
+            if sim > 0.7:  # 块相似度阈值
+                current_consecutive_sim += sim
+                consecutive_count += 1
+                if consecutive_count >= 3:  # 至少需要3个连续块
+                    avg_sim = current_consecutive_sim / consecutive_count
+                    max_consecutive_sim = max(max_consecutive_sim, avg_sim)
+            else:
+                current_consecutive_sim = 0
+                consecutive_count = 0
+        
+        # 2. 计算整体相似度
+        overall_sim = np.mean(block_similarities)
+        
+        # 记录详细信息
+        self.log(f"Block similarities: {block_similarities}")
+        self.log(f"Max consecutive similarity: {max_consecutive_sim:.4f}")
+        self.log(f"Overall similarity: {overall_sim:.4f}")
+        
+        # 返回加权平均
+        final_sim = max_consecutive_sim * 0.7 + overall_sim * 0.3
+        
+        return final_sim
 
     def run(self):
         try:
@@ -223,3 +283,4 @@ class VideoProcessThread(QThread):
             self.log(f"Error in save_comparison_image: {str(e)}")
             import traceback
             self.log(traceback.format_exc())
+
