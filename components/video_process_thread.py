@@ -20,12 +20,8 @@ class VideoProcessThread(QThread):
         
         self.fixed_top_height = 120
         self.fixed_bottom_height = 70
-        self.repeat_check_height = 120  # 区域1的高度
-        self.region2_height = 120       # 区域2的高度
-        # 扩展区域的总高度是区域1和区域2的高度之和
-        self.extended_check_height = self.repeat_check_height + self.region2_height
-        self.rough_similarity_threshold = 0.65  # 扩展区域的相似度阈值（降低阈值）
-        self.fine_similarity_threshold = 0.70   # 区域1的相似度阈值（降低阈值）
+        self.check_height = 180  # 检查区域的总高度
+        self.similarity_threshold = 0.7  # 相似度阈值
 
     def setup_logging(self):
         self.logger = logging.getLogger('VideoProcessThread')
@@ -39,80 +35,35 @@ class VideoProcessThread(QThread):
         self.logger.info(message)
         self.log_message.emit(message)
 
-    def run(self):
+    def get_check_region(self, frame, is_bottom=False):
+        """获取检查区域"""
+        if is_bottom:
+            return frame[-self.fixed_bottom_height-self.check_height:-self.fixed_bottom_height]
+        else:
+            return frame[self.fixed_top_height:self.fixed_top_height+self.check_height]
+
+    def check_similarity(self, last_regions, current_regions):
         try:
-            cap = cv2.VideoCapture(self.video_path)
-            total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-            self.log(f"Total frames: {total_frames}")
-
-            frames = []
-            last_regions = None
-
-            for i in range(total_frames):
-                try:
-                    ret, frame = cap.read()
-                    if not ret:
-                        self.log(f"Failed to read frame {i}")
-                        break
-
-                    if len(frames) == 0:
-                        frames.append(frame)
-                        last_regions = self.get_repeat_region(frame)
-                        self.log("Processing first frame")
-                        self.save_debug_frame(frame, i, "First", self.fixed_top_height, self.fixed_bottom_height)
-                        self.save_repeat_region(last_regions[1], i, "First_Repeat")
-                        self.log("First frame processed successfully")
-                        continue
-
-                    self.log(f"Processing frame {i}")
-                    current_regions = self.get_top_region(frame)
-                    full_sim, region1_sim, comparison_image = self.check_similarity(last_regions, current_regions)
-                    
-                    status = f"Full_{full_sim:.4f}_Region1_{region1_sim:.4f}"
-                    self.save_comparison_image(comparison_image, i, status)
-                    
-                    if full_sim >= self.rough_similarity_threshold and region1_sim >= self.fine_similarity_threshold:
-                        frames.append(frame)
-                        last_regions = self.get_repeat_region(frame)
-                        self.log(f"Added new frame {len(frames)}, similarities: {status}")
-                        self.save_debug_frame(frame, i, f"Frame_{len(frames)}", self.fixed_top_height, self.fixed_bottom_height)
-                        self.save_repeat_region(last_regions[1], i, f"NewRepeat_{len(frames)}")
-                    else:
-                        self.save_debug_frame(frame, i, f"Skipped_{status}", self.fixed_top_height, self.fixed_bottom_height)
-
-                    self.progress.emit(int((i + 1) / total_frames * 100))
-
-                except Exception as e:
-                    self.log(f"Error processing frame {i}: {str(e)}")
-                    import traceback
-                    self.log(traceback.format_exc())
-                    break
-                if i > 400:
-                    break
-
-            cap.release()
-            self.log(f"Processing completed. Total frames captured: {len(frames)}")
-            self.finished.emit(frames)
+            last_region = last_regions[0]  # 只需要完整区域
+            current_region = current_regions[0]
+            
+            # 保存引用供显示使用
+            self.last_region = last_region
+            self.current_region = current_region
+            
+            # 计算区域相似度
+            similarity = self.compute_similarity(last_region, current_region)
+            
+            # 创建对比图像
+            comparison_image = np.hstack((last_region, current_region))
+            
+            return similarity, similarity, comparison_image
 
         except Exception as e:
-            self.log(f"Critical error in run method: {str(e)}")
+            self.log(f"Error in check_similarity: {str(e)}")
             import traceback
             self.log(traceback.format_exc())
-            self.finished.emit([])  # 发送空列表表示处理失败
-
-    def get_repeat_region(self, frame):
-        total_height = self.repeat_check_height + self.region2_height
-        region = frame[-self.fixed_bottom_height-total_height:-self.fixed_bottom_height]
-        region1 = region[-self.repeat_check_height:]  # 下面的区域1
-        region2 = region[:-self.repeat_check_height]  # 上面的区域2
-        return region, region1, region2
-
-    def get_top_region(self, frame):
-        total_height = self.repeat_check_height + self.region2_height
-        region = frame[self.fixed_top_height:self.fixed_top_height+total_height]
-        region1 = region[:self.repeat_check_height]   # 上面的区域1
-        region2 = region[self.repeat_check_height:]   # 下面的区域2
-        return region, region1, region2
+            raise
 
     def compute_similarity(self, img1, img2):
         """计算两个图像的相似度"""
@@ -145,167 +96,124 @@ class VideoProcessThread(QThread):
         
         return (template_sim + hist_sim) / 2
 
-    def check_region1_similarity(self, last_region1, current_region1):
-        """使用滑动窗口在垂直方向上寻找最佳匹配位置"""
+    def run(self):
         try:
-            max_offset = 20  # 上下偏移的最大像素数
-            max_similarity = 0
-            best_offset = 0
-            
-            height, width = last_region1.shape[:2]
-            window_height = height - max_offset * 2
-            
-            # 在last_region1中取中间部分作为模板
-            template = last_region1[max_offset:height-max_offset, :]
-            
-            # 保存最佳匹配的区域和模板用于显示
-            self.best_match_region = None
-            self.template_region = template  # 保存模板区域
-            
-            # 在current_region1中滑动查找最佳匹配位置
-            for offset in range(max_offset * 2):
-                current_window = current_region1[offset:offset+window_height, :]
-                if current_window.shape[0] == template.shape[0]:
-                    similarity = self.compute_similarity(template, current_window)
-                    if similarity > max_similarity:
-                        max_similarity = similarity
-                        best_offset = offset
-                        self.best_match_region = current_window.copy()  # 保存一���副本
-            
-            self.log(f"Best match found at offset {best_offset} with similarity {max_similarity:.4f}")
-            return max_similarity
-            
-        except Exception as e:
-            self.log(f"Error in check_region1_similarity: {str(e)}")
-            import traceback
-            self.log(traceback.format_exc())
-            return 0
+            cap = cv2.VideoCapture(self.video_path)
+            total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+            self.log(f"Total frames: {total_frames}")
 
-    def check_similarity(self, last_regions, current_regions):
-        try:
-            last_full, last_region1, last_region2 = last_regions
-            current_full, current_region1, current_region2 = current_regions
-            
-            # 保存引用供显示使用
-            self.last_extended_repeat = last_full
-            self.current_extended_top = current_full
-            
-            # 计算扩展区域的相似度
-            full_sim = self.compute_similarity(last_full, current_full)
-            
-            if full_sim >= self.rough_similarity_threshold:
-                # 找到 full 区域中最相似的部分
-                result = cv2.matchTemplate(
-                    cv2.cvtColor(current_full, cv2.COLOR_BGR2GRAY),
-                    cv2.cvtColor(last_full, cv2.COLOR_BGR2GRAY),
-                    cv2.TM_CCOEFF_NORMED
-                )
-                _, _, _, max_loc = cv2.minMaxLoc(result)
-                
-                # 根据匹配位置确定重复区域
-                match_y = max_loc[1]  # 匹配位置的y坐标
-                
-                # 从 last_full 中提取实际的重复区域（region1）
-                self.last_region1 = last_full[-self.repeat_check_height:]
-                
-                # 从 current_full 中提取对应位置的区域
-                start_y = match_y
-                end_y = start_y + self.repeat_check_height
-                self.current_region1 = current_full[start_y:end_y]
-                
-                # 创建对比图像
-                comparison_image = np.hstack((self.last_region1, self.current_region1))
-                
-                # 返回 full 的相似度作为 region1 的相似度
-                return full_sim, full_sim, comparison_image
-            else:
-                # 如果 full 区域相似度不够，直接返回
-                comparison_image = np.hstack((last_region1, current_region1))
-                return full_sim, 0, comparison_image
+            frames = []
+            last_regions = None
+
+            for i in range(total_frames):
+                try:
+                    ret, frame = cap.read()
+                    if not ret:
+                        self.log(f"Failed to read frame {i}")
+                        break
+
+                    if len(frames) == 0:
+                        frames.append(frame)
+                        last_regions = (self.get_check_region(frame, True), None, None)
+                        self.log("First frame processed successfully")
+                        self.save_debug_frame(frame, i, "First")
+                        continue
+
+                    self.log(f"Processing frame {i}")
+                    current_regions = (self.get_check_region(frame), None, None)
+                    similarity, _, comparison_image = self.check_similarity(last_regions, current_regions)
+                    
+                    status = f"Similarity_{similarity:.4f}"
+                    self.save_comparison_image(comparison_image, i, status)
+                    
+                    if similarity >= self.similarity_threshold:
+                        frames.append(frame)
+                        last_regions = (self.get_check_region(frame, True), None, None)
+                        self.log(f"Added new frame {len(frames)}, similarity: {similarity:.4f}")
+                        self.save_debug_frame(frame, i, f"Frame_{len(frames)}")
+                    else:
+                        self.save_debug_frame(frame, i, f"Skipped_{status}")
+
+                    self.progress.emit(int((i + 1) / total_frames * 100))
+
+                except Exception as e:
+                    self.log(f"Error processing frame {i}: {str(e)}")
+                    import traceback
+                    self.log(traceback.format_exc())
+                    break
+                if i > 400:
+                    break
+
+            cap.release()
+            self.log(f"Processing completed. Total frames captured: {len(frames)}")
+            self.finished.emit(frames)
 
         except Exception as e:
-            self.log(f"Error in check_similarity: {str(e)}")
+            self.log(f"Critical error in run method: {str(e)}")
             import traceback
             self.log(traceback.format_exc())
-            raise
-    
-    def save_debug_frame(self, frame, frame_number, status, fixed_top_height, fixed_bottom_height):
+            self.finished.emit([])
+
+    def save_debug_frame(self, frame, frame_number, status):
         debug_frame = frame.copy()
         
-        # 绘制固定区域的线
-        cv2.line(debug_frame, (0, fixed_top_height), (debug_frame.shape[1], fixed_top_height), (0, 255, 0), 2)
-        cv2.line(debug_frame, (0, debug_frame.shape[0] - fixed_bottom_height), (debug_frame.shape[1], debug_frame.shape[0] - fixed_bottom_height), (0, 255, 0), 2)
+        # 绘制固定区域的线和检查区域
+        cv2.line(debug_frame, (0, self.fixed_top_height), 
+                 (debug_frame.shape[1], self.fixed_top_height), (0, 255, 0), 2)
+        cv2.line(debug_frame, (0, debug_frame.shape[0] - self.fixed_bottom_height), 
+                 (debug_frame.shape[1], debug_frame.shape[0] - self.fixed_bottom_height), (0, 255, 0), 2)
         
-        # 绘制实际重复检测区域（蓝色）
+        # 绘制检查区域（红色）
         cv2.rectangle(debug_frame, 
-                    (0, fixed_top_height), 
-                    (debug_frame.shape[1], fixed_top_height + self.repeat_check_height), 
-                    (255, 0, 0), 2)
-        cv2.rectangle(debug_frame, 
-                    (0, debug_frame.shape[0] - fixed_bottom_height - self.repeat_check_height), 
-                    (debug_frame.shape[1], debug_frame.shape[0] - fixed_bottom_height), 
-                    (255, 0, 0), 2)
-        
-        # 绘制扩展检测区域（红色）
-        cv2.rectangle(debug_frame, 
-                    (0, fixed_top_height), 
-                    (debug_frame.shape[1], fixed_top_height + self.extended_check_height), 
+                    (0, self.fixed_top_height), 
+                    (debug_frame.shape[1], self.fixed_top_height + self.check_height), 
                     (0, 0, 255), 2)
         cv2.rectangle(debug_frame, 
-                    (0, debug_frame.shape[0] - fixed_bottom_height - self.extended_check_height), 
-                    (debug_frame.shape[1], debug_frame.shape[0] - fixed_bottom_height), 
+                    (0, debug_frame.shape[0] - self.fixed_bottom_height - self.check_height), 
+                    (debug_frame.shape[1], debug_frame.shape[0] - self.fixed_bottom_height), 
                     (0, 0, 255), 2)
         
         # 添加标注文字
         font = cv2.FONT_HERSHEY_SIMPLEX
-        cv2.putText(debug_frame, "Actual Region", (10, fixed_top_height - 10), font, 0.7, (255, 0, 0), 2)
-        cv2.putText(debug_frame, "Extended Region", (10, fixed_top_height + self.repeat_check_height + 20), font, 0.7, (0, 0, 255), 2)
-        cv2.putText(debug_frame, status, (10, 30), font, 1, (0, 0, 255), 2, cv2.LINE_AA)
+        cv2.putText(debug_frame, "Check Region", (10, self.fixed_top_height - 10), 
+                    font, 0.7, (0, 0, 255), 2)
+        cv2.putText(debug_frame, status, (10, 30), font, 1, (0, 0, 255), 2)
         
         filename = f"{self.debug_output_dir}/frame_{frame_number:04d}_{status}.jpg"
         cv2.imwrite(filename, debug_frame)
         self.log(f"Saved debug frame: {filename}")
 
-
-
-
-    def save_repeat_region(self, repeat_region, frame_number, status):
-        filename = f"{self.repeat_region_dir}/repeat_region_{frame_number:04d}_{status}.jpg"
-        cv2.imwrite(filename, repeat_region)
-        self.log(f"Saved repeat region: {filename}")
-
     def save_comparison_image(self, comparison_image, frame_number, status):
         try:
-            extended_height = self.extended_check_height
-            actual_height = self.repeat_check_height
+            extended_height = self.check_height
             width = comparison_image.shape[1]
             
             # 创建白色背景
             full_comparison = np.ones((extended_height + 50, width, 3), dtype=np.uint8) * 255
             
-            # 复制扩展区域图像
-            if hasattr(self, 'last_extended_repeat') and hasattr(self, 'current_extended_top'):
-                full_comparison[0:extended_height, :width//2] = self.last_extended_repeat
-                full_comparison[0:extended_height, width//2:] = self.current_extended_top
+            # 复制检查区域图像
+            if hasattr(self, 'last_region') and hasattr(self, 'current_region'):
+                full_comparison[0:extended_height, :width] = self.last_region
+                full_comparison[0:extended_height, width:] = self.current_region
                 
-                # 在扩展区域上标记实际重复区域（蓝色矩形）
-                if hasattr(self, 'last_region1') and hasattr(self, 'current_region1'):
+                # 在检查区域上标记实际重复区域（蓝色矩形）
+                if hasattr(self, 'last_region') and hasattr(self, 'current_region'):
                     # 标记 Last Repeat 中的重复区域
                     cv2.rectangle(full_comparison, 
-                                (0, extended_height - actual_height), 
-                                (width//2, extended_height), 
+                                (0, extended_height - self.check_height), 
+                                (width, extended_height), 
                                 (255, 0, 0), 2)
                     
                     # 标记 Current Top 中的重复区域
                     cv2.rectangle(full_comparison, 
-                                (width//2, 0), 
-                                (width, actual_height), 
+                                (0, 0), 
+                                (width, self.check_height), 
                                 (255, 0, 0), 2)
             
             # 添加标注
             font = cv2.FONT_HERSHEY_SIMPLEX
             cv2.putText(full_comparison, "Last Repeat", (10, 30), font, 1, (0, 255, 0), 2)
-            cv2.putText(full_comparison, "Current Top", (width//2 + 10, 30), font, 1, (0, 255, 0), 2)
+            cv2.putText(full_comparison, "Current Top", (10, 30), font, 1, (0, 255, 0), 2)
             cv2.putText(full_comparison, "Matched Region", (10, extended_height - 5), font, 0.7, (255, 0, 0), 2)
             cv2.putText(full_comparison, status, (10, extended_height + 30), font, 0.7, (0, 0, 255), 2)
             
@@ -317,7 +225,3 @@ class VideoProcessThread(QThread):
             self.log(f"Error in save_comparison_image: {str(e)}")
             import traceback
             self.log(traceback.format_exc())
-
-
-
-
