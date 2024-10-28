@@ -22,6 +22,8 @@ class VideoProcessThread(QThread):
         self.fixed_bottom_height = 70
         self.repeat_check_height = 90  # 区域1的高度
         self.region2_height = 90       # 区域2的高度
+        # 扩展区域的总高度是区域1和区域2的高度之和
+        self.extended_check_height = self.repeat_check_height + self.region2_height
         self.rough_similarity_threshold = 0.65  # 扩展区域的相似度阈值（降低阈值）
         self.fine_similarity_threshold = 0.70   # 区域1的相似度阈值（降低阈值）
 
@@ -38,46 +40,63 @@ class VideoProcessThread(QThread):
         self.log_message.emit(message)
 
     def run(self):
-        cap = cv2.VideoCapture(self.video_path)
-        total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-        self.log(f"Total frames: {total_frames}")
+        try:
+            cap = cv2.VideoCapture(self.video_path)
+            total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+            self.log(f"Total frames: {total_frames}")
 
-        frames = []
-        last_regions = None
+            frames = []
+            last_regions = None
 
-        for i in range(total_frames):
-            ret, frame = cap.read()
-            if not ret:
-                self.log(f"Failed to read frame {i}")
-                break
+            for i in range(total_frames):
+                try:
+                    ret, frame = cap.read()
+                    if not ret:
+                        self.log(f"Failed to read frame {i}")
+                        break
 
-            if len(frames) == 0:
-                frames.append(frame)
-                last_regions = self.get_repeat_region(frame)
-                self.save_debug_frame(frame, i, "First", self.fixed_top_height, self.fixed_bottom_height)
-                self.save_repeat_region(last_regions[1], i, "First_Repeat")  # 只保存区域1
-                continue
+                    if len(frames) == 0:
+                        frames.append(frame)
+                        last_regions = self.get_repeat_region(frame)
+                        self.log("Processing first frame")
+                        self.save_debug_frame(frame, i, "First", self.fixed_top_height, self.fixed_bottom_height)
+                        self.save_repeat_region(last_regions[1], i, "First_Repeat")
+                        self.log("First frame processed successfully")
+                        continue
 
-            current_regions = self.get_top_region(frame)
-            full_sim, region1_sim, comparison_image = self.check_similarity(last_regions, current_regions)
-            
-            status = f"Full_{full_sim:.4f}_Region1_{region1_sim:.4f}"
-            self.save_comparison_image(comparison_image, i, status)
-            
-            if full_sim >= self.rough_similarity_threshold and region1_sim >= self.fine_similarity_threshold:
-                frames.append(frame)
-                last_regions = self.get_repeat_region(frame)
-                self.log(f"Added new frame {len(frames)}, similarities: {status}")
-                self.save_debug_frame(frame, i, f"Frame_{len(frames)}", self.fixed_top_height, self.fixed_bottom_height)
-                self.save_repeat_region(last_regions[1], i, f"NewRepeat_{len(frames)}")
-            else:
-                self.save_debug_frame(frame, i, f"Skipped_{status}", self.fixed_top_height, self.fixed_bottom_height)
+                    self.log(f"Processing frame {i}")
+                    current_regions = self.get_top_region(frame)
+                    full_sim, region1_sim, comparison_image = self.check_similarity(last_regions, current_regions)
+                    
+                    status = f"Full_{full_sim:.4f}_Region1_{region1_sim:.4f}"
+                    self.save_comparison_image(comparison_image, i, status)
+                    
+                    if full_sim >= self.rough_similarity_threshold and region1_sim >= self.fine_similarity_threshold:
+                        frames.append(frame)
+                        last_regions = self.get_repeat_region(frame)
+                        self.log(f"Added new frame {len(frames)}, similarities: {status}")
+                        self.save_debug_frame(frame, i, f"Frame_{len(frames)}", self.fixed_top_height, self.fixed_bottom_height)
+                        self.save_repeat_region(last_regions[1], i, f"NewRepeat_{len(frames)}")
+                    else:
+                        self.save_debug_frame(frame, i, f"Skipped_{status}", self.fixed_top_height, self.fixed_bottom_height)
 
-            self.progress.emit(int((i + 1) / total_frames * 100))
+                    self.progress.emit(int((i + 1) / total_frames * 100))
 
-        cap.release()
-        self.log(f"Processing completed. Total frames captured: {len(frames)}")
-        self.finished.emit(frames)
+                except Exception as e:
+                    self.log(f"Error processing frame {i}: {str(e)}")
+                    import traceback
+                    self.log(traceback.format_exc())
+                    break
+
+            cap.release()
+            self.log(f"Processing completed. Total frames captured: {len(frames)}")
+            self.finished.emit(frames)
+
+        except Exception as e:
+            self.log(f"Critical error in run method: {str(e)}")
+            import traceback
+            self.log(traceback.format_exc())
+            self.finished.emit([])  # 发送空列表表示处理失败
 
     def get_repeat_region(self, frame):
         total_height = self.repeat_check_height + self.region2_height
@@ -94,51 +113,71 @@ class VideoProcessThread(QThread):
         return region, region1, region2
 
     def check_similarity(self, last_regions, current_regions):
-        last_full, last_region1, last_region2 = last_regions
-        current_full, current_region1, current_region2 = current_regions
-        
-        # 保存引用供显示使用
-        self.last_full_region = last_full
-        self.current_full_region = current_full
-        self.last_region1 = last_region1
-        self.current_region1 = current_region1
-        
-        # 转换为灰度图像并进行边缘模糊处理
-        def preprocess_image(img):
-            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-            blur = cv2.GaussianBlur(gray, (3, 3), 0)
-            return blur
-        
-        # 计算相似度（使用多个方法）
-        def compute_similarity(img1, img2):
-            # 模板匹配
-            result = cv2.matchTemplate(img1, img2, cv2.TM_CCOEFF_NORMED)
-            template_sim = np.max(result)
+        try:
+            last_full, last_region1, last_region2 = last_regions
+            current_full, current_region1, current_region2 = current_regions
             
-            # 直方图比较
-            hist1 = cv2.calcHist([img1], [0], None, [256], [0, 256])
-            hist2 = cv2.calcHist([img2], [0], None, [256], [0, 256])
-            hist_sim = cv2.compareHist(hist1, hist2, cv2.HISTCMP_CORREL)
+            # 保存引用供显示使用
+            self.last_full_region = last_full
+            self.current_full_region = current_full
+            self.last_region1 = last_region1
+            self.current_region1 = current_region1
             
-            return (template_sim + hist_sim) / 2
-        
-        # 计算扩展区域的相似度
-        full_sim = compute_similarity(
-            preprocess_image(last_full),
-            preprocess_image(current_full)
-        )
-        
-        # 如果扩展区域相似度达到阈值，再计算区域1的相似度
-        if full_sim >= self.rough_similarity_threshold:
-            region1_sim = compute_similarity(
-                preprocess_image(last_region1),
-                preprocess_image(current_region1)
+            # 转换为灰度图像并进行边缘模糊处理
+            def preprocess_image(img):
+                if img is None:
+                    raise ValueError("Input image is None")
+                gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+                blur = cv2.GaussianBlur(gray, (3, 3), 0)
+                return blur
+            
+            # 计算相似度（使用多个方法）
+            def compute_similarity(img1, img2):
+                if img1 is None or img2 is None:
+                    raise ValueError("One of the input images is None")
+                # 确保两个图像大小相同
+                if img1.shape != img2.shape:
+                    self.log(f"Image shapes don't match: {img1.shape} vs {img2.shape}")
+                    img2 = cv2.resize(img2, (img1.shape[1], img1.shape[0]))
+                
+                # 模板匹配
+                result = cv2.matchTemplate(img1, img2, cv2.TM_CCOEFF_NORMED)
+                template_sim = np.max(result)
+                
+                # 直方图比较
+                hist1 = cv2.calcHist([img1], [0], None, [256], [0, 256])
+                hist2 = cv2.calcHist([img2], [0], None, [256], [0, 256])
+                hist_sim = cv2.compareHist(hist1, hist2, cv2.HISTCMP_CORREL)
+                
+                return (template_sim + hist_sim) / 2
+            
+            # 记录图像尺寸
+            self.log(f"Last full region shape: {last_full.shape}")
+            self.log(f"Current full region shape: {current_full.shape}")
+            
+            # 计算扩展区域的相似度
+            full_sim = compute_similarity(
+                preprocess_image(last_full),
+                preprocess_image(current_full)
             )
-        else:
-            region1_sim = 0
-        
-        comparison_image = np.hstack((last_region1, current_region1))
-        return full_sim, region1_sim, comparison_image
+            
+            # 如果扩展区域相似度达到阈值，再计算区域1的相似度
+            if full_sim >= self.rough_similarity_threshold:
+                region1_sim = compute_similarity(
+                    preprocess_image(last_region1),
+                    preprocess_image(current_region1)
+                )
+            else:
+                region1_sim = 0
+            
+            comparison_image = np.hstack((last_region1, current_region1))
+            return full_sim, region1_sim, comparison_image
+
+        except Exception as e:
+            self.log(f"Error in check_similarity: {str(e)}")
+            import traceback
+            self.log(traceback.format_exc())
+            raise
     
     def save_debug_frame(self, frame, frame_number, status, fixed_top_height, fixed_bottom_height):
         debug_frame = frame.copy()
@@ -223,3 +262,4 @@ class VideoProcessThread(QThread):
         filename = f"{self.repeat_region_dir}/comparison_{frame_number:04d}_{status}.jpg"
         cv2.imwrite(filename, full_comparison)
         self.log(f"Saved comparison image: {filename}")
+
