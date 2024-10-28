@@ -20,8 +20,8 @@ class VideoProcessThread(QThread):
         
         self.fixed_top_height = 120
         self.fixed_bottom_height = 70
-        self.repeat_check_height = 90  # 区域1的高度
-        self.region2_height = 90       # 区域2的高度
+        self.repeat_check_height = 100  # 区域1的高度
+        self.region2_height = 100       # 区域2的高度
         # 扩展区域的总高度是区域1和区域2的高度之和
         self.extended_check_height = self.repeat_check_height + self.region2_height
         self.rough_similarity_threshold = 0.65  # 扩展区域的相似度阈值（降低阈值）
@@ -114,66 +114,98 @@ class VideoProcessThread(QThread):
         region2 = region[self.repeat_check_height:]   # 下面的区域2
         return region, region1, region2
 
+    def compute_similarity(self, img1, img2):
+        """计算两个图像的相似度"""
+        if img1 is None or img2 is None:
+            raise ValueError("One of the input images is None")
+        
+        # 确保两个图像大小相同
+        if img1.shape != img2.shape:
+            self.log(f"Image shapes don't match: {img1.shape} vs {img2.shape}")
+            img2 = cv2.resize(img2, (img1.shape[1], img1.shape[0]))
+        
+        # 转换为灰度图
+        if len(img1.shape) == 3:
+            img1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
+        if len(img2.shape) == 3:
+            img2 = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)
+        
+        # 应用高斯模糊减少噪声
+        img1 = cv2.GaussianBlur(img1, (3, 3), 0)
+        img2 = cv2.GaussianBlur(img2, (3, 3), 0)
+        
+        # 模板匹配
+        result = cv2.matchTemplate(img1, img2, cv2.TM_CCOEFF_NORMED)
+        template_sim = np.max(result)
+        
+        # 直方图比较
+        hist1 = cv2.calcHist([img1], [0], None, [256], [0, 256])
+        hist2 = cv2.calcHist([img2], [0], None, [256], [0, 256])
+        hist_sim = cv2.compareHist(hist1, hist2, cv2.HISTCMP_CORREL)
+        
+        return (template_sim + hist_sim) / 2
+
+    def check_region1_similarity(self, last_region1, current_region1):
+        """使用滑动窗口在垂直方向上寻找最佳匹配位置"""
+        try:
+            max_offset = 20  # 上下偏移的最大像素数
+            max_similarity = 0
+            best_offset = 0
+            
+            height, width = last_region1.shape[:2]
+            window_height = height - max_offset * 2
+            
+            # 在last_region1中取中间部分作为模板
+            template = last_region1[max_offset:height-max_offset, :]
+            
+            # 保存最佳匹配的区域用于显示
+            self.best_match_region = None
+            
+            # 在current_region1中滑动查找最佳匹配位置
+            for offset in range(max_offset * 2):
+                current_window = current_region1[offset:offset+window_height, :]
+                if current_window.shape[0] == template.shape[0]:
+                    similarity = self.compute_similarity(template, current_window)
+                    if similarity > max_similarity:
+                        max_similarity = similarity
+                        best_offset = offset
+                        self.best_match_region = current_window
+            
+            self.log(f"Best match found at offset {best_offset} with similarity {max_similarity:.4f}")
+            return max_similarity
+            
+        except Exception as e:
+            self.log(f"Error in check_region1_similarity: {str(e)}")
+            import traceback
+            self.log(traceback.format_exc())
+            return 0
+
     def check_similarity(self, last_regions, current_regions):
         try:
             last_full, last_region1, last_region2 = last_regions
             current_full, current_region1, current_region2 = current_regions
             
             # 保存引用供显示使用
-            self.last_extended_repeat = last_full      # 添加这行
-            self.current_extended_top = current_full   # 添加这行
+            self.last_extended_repeat = last_full
+            self.current_extended_top = current_full
             self.last_region1 = last_region1
             self.current_region1 = current_region1
-        
-            
-            # 转换为灰度图像并进行边缘模糊处理
-            def preprocess_image(img):
-                if img is None:
-                    raise ValueError("Input image is None")
-                gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-                blur = cv2.GaussianBlur(gray, (3, 3), 0)
-                return blur
-            
-            # 计算相似度（使用多个方法）
-            def compute_similarity(img1, img2):
-                if img1 is None or img2 is None:
-                    raise ValueError("One of the input images is None")
-                # 确保两个图像大小相同
-                if img1.shape != img2.shape:
-                    self.log(f"Image shapes don't match: {img1.shape} vs {img2.shape}")
-                    img2 = cv2.resize(img2, (img1.shape[1], img1.shape[0]))
-                
-                # 模板匹配
-                result = cv2.matchTemplate(img1, img2, cv2.TM_CCOEFF_NORMED)
-                template_sim = np.max(result)
-                
-                # 直方图比较
-                hist1 = cv2.calcHist([img1], [0], None, [256], [0, 256])
-                hist2 = cv2.calcHist([img2], [0], None, [256], [0, 256])
-                hist_sim = cv2.compareHist(hist1, hist2, cv2.HISTCMP_CORREL)
-                
-                return (template_sim + hist_sim) / 2
-            
-            # 记录图像尺寸
-            self.log(f"Last full region shape: {last_full.shape}")
-            self.log(f"Current full region shape: {current_full.shape}")
             
             # 计算扩展区域的相似度
-            full_sim = compute_similarity(
-                preprocess_image(last_full),
-                preprocess_image(current_full)
-            )
+            full_sim = self.compute_similarity(last_full, current_full)
             
-            # 如果扩展区域相似度达到阈值，再计算区域1的相似度
+            # 如果扩展区域相似度达到阈值，使用滑动窗口计算区域1的相似度
             if full_sim >= self.rough_similarity_threshold:
-                region1_sim = compute_similarity(
-                    preprocess_image(last_region1),
-                    preprocess_image(current_region1)
-                )
+                region1_sim = self.check_region1_similarity(last_region1, current_region1)
             else:
                 region1_sim = 0
             
-            comparison_image = np.hstack((last_region1, current_region1))
+            # 创建对比图像，显示最佳匹配区域
+            if hasattr(self, 'best_match_region') and self.best_match_region is not None:
+                comparison_image = np.hstack((last_region1, self.best_match_region))
+            else:
+                comparison_image = np.hstack((last_region1, current_region1))
+            
             return full_sim, region1_sim, comparison_image
 
         except Exception as e:
@@ -277,4 +309,5 @@ class VideoProcessThread(QThread):
             self.log(f"Error in save_comparison_image: {str(e)}")
             import traceback
             self.log(traceback.format_exc())
+
 
