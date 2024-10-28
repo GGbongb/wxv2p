@@ -20,8 +20,8 @@ class VideoProcessThread(QThread):
         
         self.fixed_top_height = 120
         self.fixed_bottom_height = 70
-        self.repeat_check_height = 100  # 重复检测区域的高度
-        self.similarity_threshold = 0.85  # 相似度阈值
+        self.repeat_check_height = 120  # 重复检测区域的高度
+        self.similarity_threshold = 0.80  # 相似度阈值
         self.consecutive_frames_threshold = 3  # 连续相似帧数阈值
 
     def setup_logging(self):
@@ -62,25 +62,20 @@ class VideoProcessThread(QThread):
             similarity, comparison_image = self.check_similarity(last_repeat_region, current_top_region)
             
             is_similar = similarity >= self.similarity_threshold
+
+
+            status = f"Similar_{similarity:.4f}" if is_similar else f"Different_{similarity:.4f}"
+            self.save_comparison_image(comparison_image, i, status)
+            
             if is_similar:
                 consecutive_similar_frames += 1
             else:
                 consecutive_similar_frames = 0
 
-            status = f"Similar_{similarity:.4f}" if is_similar else f"Different_{similarity:.4f}"
-            self.save_comparison_image(comparison_image, i, status)
-
-            if consecutive_similar_frames >= self.consecutive_frames_threshold:
-                frames.append(frame)
-                last_repeat_region = self.get_repeat_region(frame)
-                self.log(f"Added new frame {len(frames)}, similarity: {similarity:.4f}")
-                self.save_debug_frame(frame, i, f"Frame_{len(frames)}", self.fixed_top_height, self.fixed_bottom_height)
-                self.save_repeat_region(last_repeat_region, i, f"NewRepeat_{len(frames)}")
-                consecutive_similar_frames = 0
-            else:
-                self.save_debug_frame(frame, i, f"Skipped_{similarity:.4f}", self.fixed_top_height, self.fixed_bottom_height)
-
             self.progress.emit(int((i + 1) / total_frames * 100))
+
+            if i > 200 :
+                break
 
         cap.release()
         self.log(f"Processing completed. Total frames captured: {len(frames)}")
