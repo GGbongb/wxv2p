@@ -20,10 +20,10 @@ class VideoProcessThread(QThread):
         
         self.fixed_top_height = 120
         self.fixed_bottom_height = 70
-        self.repeat_check_height = 120  # 实际显示的重复检测区域高度
-        self.extended_check_height = 240  # 扩展的检测区域高度（2倍）
-        self.rough_similarity_threshold = 0.75  # 大区域的相似度阈值（可以稍微降低）
-        self.fine_similarity_threshold = 0.80  # 小区域的相似度阈值
+        self.repeat_check_height = 90  # 区域1的高度
+        self.region2_height = 90       # 区域2的高度
+        self.rough_similarity_threshold = 0.65  # 扩展区域的相似度阈值（降低阈值）
+        self.fine_similarity_threshold = 0.70   # 区域1的相似度阈值（降低阈值）
 
     def setup_logging(self):
         self.logger = logging.getLogger('VideoProcessThread')
@@ -43,7 +43,7 @@ class VideoProcessThread(QThread):
         self.log(f"Total frames: {total_frames}")
 
         frames = []
-        last_repeat_region = None
+        last_regions = None
 
         for i in range(total_frames):
             ret, frame = cap.read()
@@ -53,23 +53,23 @@ class VideoProcessThread(QThread):
 
             if len(frames) == 0:
                 frames.append(frame)
-                last_repeat_region = self.get_repeat_region(frame, extended=True)
+                last_regions = self.get_repeat_region(frame)
                 self.save_debug_frame(frame, i, "First", self.fixed_top_height, self.fixed_bottom_height)
-                self.save_repeat_region(last_repeat_region[:self.repeat_check_height], i, "First_Repeat")
+                self.save_repeat_region(last_regions[1], i, "First_Repeat")  # 只保存区域1
                 continue
 
-            current_top_region = self.get_top_region(frame, extended=True)
-            extended_similarity, actual_similarity, comparison_image = self.check_similarity(last_repeat_region, current_top_region)
+            current_regions = self.get_top_region(frame)
+            full_sim, region1_sim, comparison_image = self.check_similarity(last_regions, current_regions)
             
-            status = f"Extended_{extended_similarity:.4f}_Actual_{actual_similarity:.4f}"
+            status = f"Full_{full_sim:.4f}_Region1_{region1_sim:.4f}"
             self.save_comparison_image(comparison_image, i, status)
             
-            if extended_similarity >= self.rough_similarity_threshold:
+            if full_sim >= self.rough_similarity_threshold and region1_sim >= self.fine_similarity_threshold:
                 frames.append(frame)
-                last_repeat_region = self.get_repeat_region(frame, extended=True)
+                last_regions = self.get_repeat_region(frame)
                 self.log(f"Added new frame {len(frames)}, similarities: {status}")
                 self.save_debug_frame(frame, i, f"Frame_{len(frames)}", self.fixed_top_height, self.fixed_bottom_height)
-                self.save_repeat_region(last_repeat_region[:self.repeat_check_height], i, f"NewRepeat_{len(frames)}")
+                self.save_repeat_region(last_regions[1], i, f"NewRepeat_{len(frames)}")
             else:
                 self.save_debug_frame(frame, i, f"Skipped_{status}", self.fixed_top_height, self.fixed_bottom_height)
 
@@ -79,42 +79,66 @@ class VideoProcessThread(QThread):
         self.log(f"Processing completed. Total frames captured: {len(frames)}")
         self.finished.emit(frames)
 
-    def get_repeat_region(self, frame, extended=False):
-        height = self.extended_check_height if extended else self.repeat_check_height
-        return frame[-self.fixed_bottom_height-height:-self.fixed_bottom_height]
+    def get_repeat_region(self, frame):
+        total_height = self.repeat_check_height + self.region2_height
+        region = frame[-self.fixed_bottom_height-total_height:-self.fixed_bottom_height]
+        region1 = region[-self.repeat_check_height:]  # 下面的区域1
+        region2 = region[:-self.repeat_check_height]  # 上面的区域2
+        return region, region1, region2
 
-    def get_top_region(self, frame, extended=False):
-        height = self.extended_check_height if extended else self.repeat_check_height
-        return frame[self.fixed_top_height:self.fixed_top_height+height]
+    def get_top_region(self, frame):
+        total_height = self.repeat_check_height + self.region2_height
+        region = frame[self.fixed_top_height:self.fixed_top_height+total_height]
+        region1 = region[:self.repeat_check_height]   # 上面的区域1
+        region2 = region[self.repeat_check_height:]   # 下面的区域2
+        return region, region1, region2
 
-
-    def check_similarity(self, repeat_region, current_top_region):
-        # 保存扩展区域的引用，供save_comparison_image使用
-        self.last_extended_repeat = repeat_region
-        self.current_extended_top = current_top_region
+    def check_similarity(self, last_regions, current_regions):
+        last_full, last_region1, last_region2 = last_regions
+        current_full, current_region1, current_region2 = current_regions
         
-        # 转换为灰度图像
-        extended_repeat_gray = cv2.cvtColor(repeat_region, cv2.COLOR_BGR2GRAY)
-        extended_current_gray = cv2.cvtColor(current_top_region, cv2.COLOR_BGR2GRAY)
+        # 保存引用供显示使用
+        self.last_full_region = last_full
+        self.current_full_region = current_full
+        self.last_region1 = last_region1
+        self.current_region1 = current_region1
+        
+        # 转换为灰度图像并进行边缘模糊处理
+        def preprocess_image(img):
+            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            blur = cv2.GaussianBlur(gray, (3, 3), 0)
+            return blur
+        
+        # 计算相似度（使用多个方法）
+        def compute_similarity(img1, img2):
+            # 模板匹配
+            result = cv2.matchTemplate(img1, img2, cv2.TM_CCOEFF_NORMED)
+            template_sim = np.max(result)
+            
+            # 直方图比较
+            hist1 = cv2.calcHist([img1], [0], None, [256], [0, 256])
+            hist2 = cv2.calcHist([img2], [0], None, [256], [0, 256])
+            hist_sim = cv2.compareHist(hist1, hist2, cv2.HISTCMP_CORREL)
+            
+            return (template_sim + hist_sim) / 2
         
         # 计算扩展区域的相似度
-        result = cv2.matchTemplate(extended_current_gray, extended_repeat_gray, cv2.TM_CCOEFF_NORMED)
-        extended_similarity = np.max(result)
+        full_sim = compute_similarity(
+            preprocess_image(last_full),
+            preprocess_image(current_full)
+        )
         
-        # 获取实际显示的重复区域
-        actual_repeat = repeat_region[:self.repeat_check_height]
-        actual_current = current_top_region[:self.repeat_check_height]
+        # 如果扩展区域相似度达到阈值，再计算区域1的相似度
+        if full_sim >= self.rough_similarity_threshold:
+            region1_sim = compute_similarity(
+                preprocess_image(last_region1),
+                preprocess_image(current_region1)
+            )
+        else:
+            region1_sim = 0
         
-        # 计算实际区域的相似度
-        actual_repeat_gray = cv2.cvtColor(actual_repeat, cv2.COLOR_BGR2GRAY)
-        actual_current_gray = cv2.cvtColor(actual_current, cv2.COLOR_BGR2GRAY)
-        result = cv2.matchTemplate(actual_current_gray, actual_repeat_gray, cv2.TM_CCOEFF_NORMED)
-        actual_similarity = np.max(result)
-        
-        # 创建对比图像（只显示实际的重复区域）
-        comparison_image = np.hstack((actual_repeat, actual_current))
-        
-        return extended_similarity, actual_similarity, comparison_image
+        comparison_image = np.hstack((last_region1, current_region1))
+        return full_sim, region1_sim, comparison_image
     
     def save_debug_frame(self, frame, frame_number, status, fixed_top_height, fixed_bottom_height):
         debug_frame = frame.copy()
