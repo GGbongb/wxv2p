@@ -53,8 +53,8 @@ class VideoProcessThread(QThread):
             # 计算相似度
             similarity = self.compute_similarity(last_region, current_region)
             
-            # 创建对比图像，并标记相似块
-            comparison_image = self.create_comparison_image(last_region, current_region)
+            # 创建对比图像
+            comparison_image = np.hstack((last_region, current_region))
             
             return similarity, similarity, comparison_image
 
