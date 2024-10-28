@@ -87,6 +87,8 @@ class VideoProcessThread(QThread):
                     import traceback
                     self.log(traceback.format_exc())
                     break
+                if i > 400:
+                    break
 
             cap.release()
             self.log(f"Processing completed. Total frames captured: {len(frames)}")
@@ -118,10 +120,11 @@ class VideoProcessThread(QThread):
             current_full, current_region1, current_region2 = current_regions
             
             # 保存引用供显示使用
-            self.last_full_region = last_full
-            self.current_full_region = current_full
+            self.last_extended_repeat = last_full      # 添加这行
+            self.current_extended_top = current_full   # 添加这行
             self.last_region1 = last_region1
             self.current_region1 = current_region1
+        
             
             # 转换为灰度图像并进行边缘模糊处理
             def preprocess_image(img):
@@ -233,33 +236,45 @@ class VideoProcessThread(QThread):
         # 创建白色背景
         full_comparison = np.ones((extended_height + 50, width, 3), dtype=np.uint8) * 255
         
-        # 复制扩展区域图像
-        full_comparison[0:extended_height, :width//2] = self.last_extended_repeat
-        full_comparison[0:extended_height, width//2:] = self.current_extended_top
-        
-        # 在扩展区域上标记实际区域的范围（蓝色矩形）
-        cv2.rectangle(full_comparison, 
-                    (0, 0), 
-                    (width//2, actual_height), 
-                    (255, 0, 0), 2)
-        cv2.rectangle(full_comparison, 
-                    (width//2, 0), 
-                    (width, actual_height), 
-                    (255, 0, 0), 2)
-        
-        font = cv2.FONT_HERSHEY_SIMPLEX
-        # 添加标题
-        cv2.putText(full_comparison, "Last Repeat", (10, 30), font, 1, (0, 255, 0), 2)
-        cv2.putText(full_comparison, "Current Top", (width//2 + 10, 30), font, 1, (0, 255, 0), 2)
-        
-        # 添加区域标注
-        cv2.putText(full_comparison, "Actual", (10, actual_height - 5), font, 0.7, (255, 0, 0), 2)
-        cv2.putText(full_comparison, "Extended", (10, extended_height - 5), font, 0.7, (0, 0, 255), 2)
-        
-        # 添加相似度信息
-        cv2.putText(full_comparison, status, (10, extended_height + 30), font, 0.7, (0, 0, 255), 2)
-        
-        filename = f"{self.repeat_region_dir}/comparison_{frame_number:04d}_{status}.jpg"
-        cv2.imwrite(filename, full_comparison)
-        self.log(f"Saved comparison image: {filename}")
+        try:
+            # 复制扩展区域图像
+            if hasattr(self, 'last_extended_repeat') and hasattr(self, 'current_extended_top'):
+                full_comparison[0:extended_height, :width//2] = self.last_extended_repeat
+                full_comparison[0:extended_height, width//2:] = self.current_extended_top
+            else:
+                self.log("Warning: Extended regions not available")
+                # 如果没有扩展区域，就只显示实际区域
+                full_comparison[0:actual_height, :width//2] = comparison_image[:, :width//2]
+                full_comparison[0:actual_height, width//2:] = comparison_image[:, width//2:]
+            
+            # 在扩展区域上标记实际区域的范围（蓝色矩形）
+            cv2.rectangle(full_comparison, 
+                        (0, 0), 
+                        (width//2, actual_height), 
+                        (255, 0, 0), 2)
+            cv2.rectangle(full_comparison, 
+                        (width//2, 0), 
+                        (width, actual_height), 
+                        (255, 0, 0), 2)
+            
+            font = cv2.FONT_HERSHEY_SIMPLEX
+            # 添加标题
+            cv2.putText(full_comparison, "Last Repeat", (10, 30), font, 1, (0, 255, 0), 2)
+            cv2.putText(full_comparison, "Current Top", (width//2 + 10, 30), font, 1, (0, 255, 0), 2)
+            
+            # 添加区域标注
+            cv2.putText(full_comparison, "Actual", (10, actual_height - 5), font, 0.7, (255, 0, 0), 2)
+            cv2.putText(full_comparison, "Extended", (10, extended_height - 5), font, 0.7, (0, 0, 255), 2)
+            
+            # 添加相似度信息
+            cv2.putText(full_comparison, status, (10, extended_height + 30), font, 0.7, (0, 0, 255), 2)
+            
+            filename = f"{self.repeat_region_dir}/comparison_{frame_number:04d}_{status}.jpg"
+            cv2.imwrite(filename, full_comparison)
+            self.log(f"Saved comparison image: {filename}")
+            
+        except Exception as e:
+            self.log(f"Error in save_comparison_image: {str(e)}")
+            import traceback
+            self.log(traceback.format_exc())
 
