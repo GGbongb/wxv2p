@@ -158,8 +158,9 @@ class VideoProcessThread(QThread):
             # 在last_region1中取中间部分作为模板
             template = last_region1[max_offset:height-max_offset, :]
             
-            # 保存最佳匹配的区域用于显示
+            # 保存最佳匹配的区域和模板用于显示
             self.best_match_region = None
+            self.template_region = template  # 保存模板区域
             
             # 在current_region1中滑动查找最佳匹配位置
             for offset in range(max_offset * 2):
@@ -169,7 +170,7 @@ class VideoProcessThread(QThread):
                     if similarity > max_similarity:
                         max_similarity = similarity
                         best_offset = offset
-                        self.best_match_region = current_window
+                        self.best_match_region = current_window.copy()  # 保存一个副本
             
             self.log(f"Best match found at offset {best_offset} with similarity {max_similarity:.4f}")
             return max_similarity
@@ -200,11 +201,20 @@ class VideoProcessThread(QThread):
             else:
                 region1_sim = 0
             
-            # 创建对比图像，显示最佳匹配区域
-            if hasattr(self, 'best_match_region') and self.best_match_region is not None:
-                comparison_image = np.hstack((last_region1, self.best_match_region))
+            # 创建对比图像，确保使用相同高度的区域进行拼接
+            if hasattr(self, 'best_match_region') and hasattr(self, 'template_region') and \
+               self.best_match_region is not None and self.template_region is not None:
+                # 记录尺寸信息到日志
+                self.log(f"Template shape: {self.template_region.shape}")
+                self.log(f"Best match shape: {self.best_match_region.shape}")
+                comparison_image = np.hstack((self.template_region, self.best_match_region))
             else:
-                comparison_image = np.hstack((last_region1, current_region1))
+                # 如果没有找到最佳匹配，使用原始区域的中间部分
+                height = min(last_region1.shape[0], current_region1.shape[0])
+                start = (last_region1.shape[0] - height) // 2
+                last_crop = last_region1[start:start+height]
+                current_crop = current_region1[start:start+height]
+                comparison_image = np.hstack((last_crop, current_crop))
             
             return full_sim, region1_sim, comparison_image
 
@@ -309,5 +319,6 @@ class VideoProcessThread(QThread):
             self.log(f"Error in save_comparison_image: {str(e)}")
             import traceback
             self.log(traceback.format_exc())
+
 
 
