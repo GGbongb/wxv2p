@@ -73,26 +73,51 @@ class VideoProcessThread(QThread):
         
         return similarity
 
-    def get_content_region(self, frame):
-        """获取内容区域（中间的主要内容区）"""
+    def get_content_regions(self, frame):
+        """获取多个检测区域"""
         height = frame.shape[0]
-        # 提取固定区域之间的内容区域
-        content_region = frame[self.fixed_top_height:height - self.fixed_bottom_height]
-        return content_region
+        content_start = self.fixed_top_height
+        content_end = height - self.fixed_bottom_height
+        
+        # 将内容区域分成多个子区域
+        region_height = (content_end - content_start) // 3
+        
+        top_region = frame[content_start:content_start + region_height]
+        mid_region = frame[content_start + region_height:content_start + 2*region_height]
+        bottom_region = frame[content_start + 2*region_height:content_end]
+        
+        return top_region, mid_region, bottom_region
 
-    def check_content_changed(self, reference_content, current_content):
-        """检查参考内容是否已经完全消失"""
+    def check_content_changed(self, reference_regions, current_regions):
+        """检查参考内容是否真正消失"""
         try:
-            # 计算相似度
-            similarity = self.compute_similarity(reference_content, current_content)
+            ref_top, ref_mid, ref_bottom = reference_regions
+            curr_top, curr_mid, curr_bottom = current_regions
             
-            # 如果相似度很低，说明参考内容已经完全消失
-            content_changed = similarity < self.similarity_threshold
+            # 计算参考内容在当前帧各个区域的相似度
+            similarities = []
+            for ref_region in [ref_top, ref_mid, ref_bottom]:
+                region_similarities = []
+                for curr_region in [curr_top, curr_mid, curr_bottom]:
+                    sim = self.compute_similarity(ref_region, curr_region)
+                    region_similarities.append(sim)
+                similarities.append(max(region_similarities))
+                
+            # 记录相似度信息
+            self.log(f"Region similarities: {similarities}")
+            
+            # 只有当所有原始内容都几乎看不到时（相似度都很低），才认为内容真正消失
+            content_changed = all(sim < self.similarity_threshold for sim in similarities)
             
             # 创建对比图像
-            comparison_image = np.hstack((reference_content, current_content))
+            ref_combined = np.vstack((ref_top, ref_mid, ref_bottom))
+            curr_combined = np.vstack((curr_top, curr_mid, curr_bottom))
+            comparison_image = np.hstack((ref_combined, curr_combined))
             
-            return content_changed, similarity, comparison_image
+            # 返回最大相似度用于显示
+            max_similarity = max(similarities)
+            
+            return content_changed, max_similarity, comparison_image
 
         except Exception as e:
             self.log(f"Error in check_content_changed: {str(e)}")
@@ -107,7 +132,7 @@ class VideoProcessThread(QThread):
             self.log(f"Total frames: {total_frames}")
 
             frames = []
-            reference_content = None
+            reference_regions = None
             skip_count = 0
 
             for i in range(total_frames):
@@ -118,7 +143,7 @@ class VideoProcessThread(QThread):
 
                     if len(frames) == 0:
                         frames.append(frame)
-                        reference_content = self.get_content_region(frame)
+                        reference_regions = self.get_content_regions(frame)
                         self.save_debug_frame(frame, i, "First")
                         continue
 
@@ -128,17 +153,17 @@ class VideoProcessThread(QThread):
                         continue
                     skip_count = 0
 
-                    current_content = self.get_content_region(frame)
+                    current_regions = self.get_content_regions(frame)
                     changed, similarity, comparison_image = self.check_content_changed(
-                        reference_content, current_content)
+                        reference_regions, current_regions)
                     
                     status = f"Similarity_{similarity:.4f}"
                     self.save_comparison_image(comparison_image, i, status)
                     
                     if changed:
                         frames.append(frame)
-                        reference_content = self.get_content_region(frame)
-                        self.log(f"Content changed, captured frame {len(frames)}")
+                        reference_regions = self.get_content_regions(frame)
+                        self.log(f"Content completely changed, captured frame {len(frames)}")
                         self.save_debug_frame(frame, i, f"Frame_{len(frames)}")
                     else:
                         self.save_debug_frame(frame, i, f"Skipped_{status}")
@@ -162,6 +187,7 @@ class VideoProcessThread(QThread):
             import traceback
             self.log(traceback.format_exc())
             self.finished.emit([])
+
 
     def save_debug_frame(self, frame, frame_number, status):
         """保存调试帧"""
