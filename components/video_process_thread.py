@@ -23,6 +23,11 @@ class VideoProcessThread(QThread):
         self.check_height = 180  # 检查区域的总高度
         self.similarity_threshold = 0.8  # 相似度阈值
 
+        # 新增参数
+        self.content_height = 180  # 内容检测区域高度
+        self.reserve_ratio = 0.2   # 预留比例，20%
+        self.last_content = None   # 存储上一帧的内容区域
+
     def setup_logging(self):
         self.logger = logging.getLogger('VideoProcessThread')
         self.logger.setLevel(logging.DEBUG)
@@ -156,6 +161,43 @@ class VideoProcessThread(QThread):
         
         return final_sim
 
+    def get_content_regions(self, frame):
+        """获取用于检测的内容区域"""
+        height = frame.shape[0]
+        # 获取三个区域：上部、中部、下部
+        top_region = frame[self.fixed_top_height:self.fixed_top_height + self.content_height]
+        mid_region = frame[height//2 - self.content_height//2:height//2 + self.content_height//2]
+        bottom_region = frame[height - self.fixed_bottom_height - self.content_height:height - self.fixed_bottom_height]
+        
+        return top_region, mid_region, bottom_region
+
+    def check_content_disappeared(self, last_regions, current_regions):
+        """检查内容是否消失（上移）"""
+        try:
+            last_top, last_mid, last_bottom = last_regions
+            curr_top, curr_mid, curr_bottom = current_regions
+            
+            # 计算last_bottom与curr_top的相似度
+            similarity = self.compute_similarity(last_bottom, curr_top)
+            
+            # 如果相似度低于阈值，说明内容已经完全上移（消失）
+            content_disappeared = similarity < self.similarity_threshold
+            
+            # 创建对比图像
+            comparison_image = np.vstack([
+                np.hstack((last_top, curr_top)),
+                np.hstack((last_mid, curr_mid)),
+                np.hstack((last_bottom, curr_bottom))
+            ])
+            
+            return content_disappeared, similarity, comparison_image
+
+        except Exception as e:
+            self.log(f"Error in check_content_disappeared: {str(e)}")
+            import traceback
+            self.log(traceback.format_exc())
+            raise
+
     def run(self):
         try:
             cap = cv2.VideoCapture(self.video_path)
@@ -169,27 +211,25 @@ class VideoProcessThread(QThread):
                 try:
                     ret, frame = cap.read()
                     if not ret:
-                        self.log(f"Failed to read frame {i}")
                         break
 
                     if len(frames) == 0:
                         frames.append(frame)
-                        last_regions = (self.get_check_region(frame, True), None, None)
-                        self.log("First frame processed successfully")
+                        last_regions = self.get_content_regions(frame)
                         self.save_debug_frame(frame, i, "First")
                         continue
 
-                    self.log(f"Processing frame {i}")
-                    current_regions = (self.get_check_region(frame), None, None)
-                    similarity, _, comparison_image = self.check_similarity(last_regions, current_regions)
+                    current_regions = self.get_content_regions(frame)
+                    disappeared, similarity, comparison_image = self.check_content_disappeared(
+                        last_regions, current_regions)
                     
                     status = f"Similarity_{similarity:.4f}"
                     self.save_comparison_image(comparison_image, i, status)
                     
-                    if similarity >= self.similarity_threshold:
+                    if disappeared:
                         frames.append(frame)
-                        last_regions = (self.get_check_region(frame, True), None, None)
-                        self.log(f"Added new frame {len(frames)}, similarity: {similarity:.4f}")
+                        last_regions = self.get_content_regions(frame)
+                        self.log(f"Content disappeared, captured frame {len(frames)}")
                         self.save_debug_frame(frame, i, f"Frame_{len(frames)}")
                     else:
                         self.save_debug_frame(frame, i, f"Skipped_{status}")
@@ -201,6 +241,7 @@ class VideoProcessThread(QThread):
                     import traceback
                     self.log(traceback.format_exc())
                     break
+
                 if i > 400:
                     break
 
