@@ -122,33 +122,63 @@ class VideoProcessThread(QThread):
             self.log(traceback.format_exc())
             raise
 
+    def compute_overlap_ratio(self, ref_region, curr_region):
+        """计算参考区域与当前区域的重叠比例"""
+        # 确保两个区域大小相同
+        if ref_region.shape != curr_region.shape:
+            curr_region = cv2.resize(curr_region, (ref_region.shape[1], ref_region.shape[0]))
+        
+        # 转换为灰度图
+        if len(ref_region.shape) == 3:
+            ref_region = cv2.cvtColor(ref_region, cv2.COLOR_BGR2GRAY)
+        if len(curr_region.shape) == 3:
+            curr_region = cv2.cvtColor(curr_region, cv2.COLOR_BGR2GRAY)
+        
+        # 计算重叠区域
+        overlap = cv2.bitwise_and(ref_region, curr_region)
+        overlap_area = np.sum(overlap > 0)
+        ref_area = np.sum(ref_region > 0)
+        
+        # 计算重叠比例
+        overlap_ratio = overlap_area / ref_area if ref_area > 0 else 0
+        return overlap_ratio
+
     def check_content_changed(self, reference_regions, current_frame):
         """检查参考内容是否真正消失"""
         try:
             ref_top, ref_mid, ref_bottom = reference_regions
             
             # 对每个参考区域在当前帧中进行滑动窗口匹配
-            region_results = []
-            positions = []
+            overlap_ratios = []
             for ref_region in [ref_top, ref_mid, ref_bottom]:
-                similarity, position = self.compute_similarity_with_sliding_window(
-                    ref_region, current_frame)
-                region_results.append(similarity)
-                positions.append(position)
+                best_overlap_ratio = 0
+                for offset in range(-50, 51):  # 滑动窗口范围
+                    start_y = max(0, self.fixed_top_height + offset)
+                    end_y = min(current_frame.shape[0] - self.fixed_bottom_height, start_y + ref_region.shape[0])
+                    
+                    if end_y - start_y < ref_region.shape[0] * 0.5:
+                        continue
+                    
+                    curr_region = current_frame[start_y:end_y]
+                    overlap_ratio = self.compute_overlap_ratio(ref_region, curr_region)
+                    
+                    if overlap_ratio > best_overlap_ratio:
+                        best_overlap_ratio = overlap_ratio
+                
+                overlap_ratios.append(best_overlap_ratio)
             
-            # 记录详细的相似度信息
-            self.log(f"Region similarities with sliding window: {region_results}")
-            self.log(f"Best matching positions: {positions}")
+            # 记录详细的重叠比例信息
+            self.log(f"Overlap ratios: {overlap_ratios}")
             
-            # 创建可视化对比图像
+            # 创建带标注的对比图像
             comparison_image = self.create_comparison_visualization(
-                reference_regions, current_frame, region_results, positions)
+                reference_regions, current_frame, overlap_ratios)
             
-            # 判断内容是否真正消失（所有区域的最佳匹配相似度都很低）
-            content_changed = all(sim < self.similarity_threshold for sim in region_results)
-            max_similarity = max(region_results)
+            # 判断内容是否真正消失（所有区域的重叠比例都很低）
+            content_changed = all(ratio < 0.2 for ratio in overlap_ratios)  # 设定重叠比例阈值
+            max_overlap_ratio = max(overlap_ratios)
             
-            return content_changed, max_similarity, comparison_image
+            return content_changed, max_overlap_ratio, comparison_image
 
         except Exception as e:
             self.log(f"Error in check_content_changed: {str(e)}")
@@ -156,7 +186,7 @@ class VideoProcessThread(QThread):
             self.log(traceback.format_exc())
             raise
 
-    def create_comparison_visualization(self, reference_regions, current_frame, similarities, positions):
+    def create_comparison_visualization(self, reference_regions, current_frame, overlap_ratios):
         """创建带有详细标注的对比图像"""
         try:
             ref_top, ref_mid, ref_bottom = reference_regions
@@ -169,21 +199,17 @@ class VideoProcessThread(QThread):
             # 调整参考区域组合图像的大小，使其高度与当前帧匹配
             ref_combined = cv2.resize(ref_combined, (width, height))
             
-            # 在当前帧中标记匹配位置
+            # 在当前帧中标记重叠比例
             marked_frame = current_frame.copy()
-            for i, (pos, sim) in enumerate(zip(positions, similarities)):
+            for i, ratio in enumerate(overlap_ratios):
                 ref_height = reference_regions[i].shape[0]
-                # 绘制匹配区域的框
-                cv2.rectangle(marked_frame, 
-                            (0, pos), 
-                            (marked_frame.shape[1], pos + ref_height),
-                            (0, 255, 0), 2)
-                # 添加相似度标注
+                y_pos = i * ref_height
+                # 添加重叠比例标注
                 cv2.putText(marked_frame, 
-                        f"Sim: {sim:.4f}", 
-                        (10, pos + 20), 
-                        cv2.FONT_HERSHEY_SIMPLEX, 
-                        0.6, (0, 0, 255), 2)
+                           f"Overlap: {ratio:.2f}", 
+                           (10, y_pos + 30), 
+                           cv2.FONT_HERSHEY_SIMPLEX, 
+                           0.6, (0, 0, 255), 2)
             
             # 将参考区域和标记后的当前帧并排显示
             comparison_image = np.hstack((ref_combined, marked_frame))
@@ -191,9 +217,9 @@ class VideoProcessThread(QThread):
             # 添加标题和说明
             font = cv2.FONT_HERSHEY_SIMPLEX
             cv2.putText(comparison_image, "Reference Regions", 
-                    (10, 30), font, 1, (0, 255, 0), 2)
-            cv2.putText(comparison_image, "Current Frame (with matching)", 
-                    (width + 10, 30), font, 1, (0, 255, 0), 2)
+                       (10, 30), font, 1, (0, 255, 0), 2)
+            cv2.putText(comparison_image, "Current Frame (with overlap)", 
+                       (width + 10, 30), font, 1, (0, 255, 0), 2)
             
             return comparison_image
 
