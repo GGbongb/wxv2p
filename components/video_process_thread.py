@@ -143,50 +143,7 @@ class VideoProcessThread(QThread):
         overlap_ratio = overlap_area / ref_area if ref_area > 0 else 0
         return overlap_ratio
 
-    def check_content_changed(self, reference_regions, current_frame):
-        """检查参考内容是否真正消失"""
-        try:
-            ref_top, ref_mid, ref_bottom = reference_regions
-            
-            # 对每个参考区域在当前帧中进行滑动窗口匹配
-            overlap_ratios = []
-            for ref_region in [ref_top, ref_mid, ref_bottom]:
-                best_overlap_ratio = 0
-                for offset in range(-50, 51):  # 滑动窗口范围
-                    start_y = max(0, self.fixed_top_height + offset)
-                    end_y = min(current_frame.shape[0] - self.fixed_bottom_height, start_y + ref_region.shape[0])
-                    
-                    if end_y - start_y < ref_region.shape[0] * 0.5:
-                        continue
-                    
-                    curr_region = current_frame[start_y:end_y]
-                    overlap_ratio = self.compute_overlap_ratio(ref_region, curr_region)
-                    
-                    if overlap_ratio > best_overlap_ratio:
-                        best_overlap_ratio = overlap_ratio
-                
-                overlap_ratios.append(best_overlap_ratio)
-            
-            # 记录详细的重叠比例信息
-            self.log(f"Overlap ratios: {overlap_ratios}")
-            
-            # 创建带标注的对比图像
-            comparison_image = self.create_comparison_visualization(
-                reference_regions, current_frame, overlap_ratios)
-            
-            # 判断内容是否真正消失（所有区域的重叠比例都很低）
-            content_changed = all(ratio < 0.2 for ratio in overlap_ratios)  # 设定重叠比例阈值
-            max_overlap_ratio = max(overlap_ratios)
-            
-            return content_changed, max_overlap_ratio, comparison_image
-
-        except Exception as e:
-            self.log(f"Error in check_content_changed: {str(e)}")
-            import traceback
-            self.log(traceback.format_exc())
-            raise
-
-    def create_comparison_visualization(self, reference_regions, current_frame, overlap_ratios):
+    def create_comparison_visualization(self, reference_regions, current_frame, overlap_ratios, positions):
         """创建带有详细标注的对比图像"""
         try:
             ref_top, ref_mid, ref_bottom = reference_regions
@@ -199,15 +156,26 @@ class VideoProcessThread(QThread):
             # 调整参考区域组合图像的大小，使其高度与当前帧匹配
             ref_combined = cv2.resize(ref_combined, (width, height))
             
-            # 在当前帧中标记重叠比例
+            # 在当前帧中标记重叠比例和匹配位置
             marked_frame = current_frame.copy()
-            for i, ratio in enumerate(overlap_ratios):
+            for i, (ratio, pos) in enumerate(zip(overlap_ratios, positions)):
                 ref_height = reference_regions[i].shape[0]
-                y_pos = i * ref_height
+                # 绘制参考区域的框
+                cv2.rectangle(ref_combined, 
+                             (0, i * ref_height), 
+                             (width, (i + 1) * ref_height),
+                             (255, 0, 0), 2)  # 蓝色框表示参考区域
+                
+                # 绘制匹配区域的框
+                cv2.rectangle(marked_frame, 
+                             (0, pos), 
+                             (width, pos + ref_height),
+                             (0, 255, 0), 2)  # 绿色框表示匹配区域
+                
                 # 添加重叠比例标注
                 cv2.putText(marked_frame, 
                            f"Overlap: {ratio:.2f}", 
-                           (10, y_pos + 30), 
+                           (10, pos + 20), 
                            cv2.FONT_HERSHEY_SIMPLEX, 
                            0.6, (0, 0, 255), 2)
             
@@ -225,6 +193,53 @@ class VideoProcessThread(QThread):
 
         except Exception as e:
             self.log(f"Error in create_comparison_visualization: {str(e)}")
+            import traceback
+            self.log(traceback.format_exc())
+            raise
+
+    def check_content_changed(self, reference_regions, current_frame):
+        """检查参考内容是否真正消失"""
+        try:
+            ref_top, ref_mid, ref_bottom = reference_regions
+            
+            # 对每个参考区域在当前帧中进行滑动窗口匹配
+            overlap_ratios = []
+            positions = []
+            for ref_region in [ref_top, ref_mid, ref_bottom]:
+                best_overlap_ratio = 0
+                best_position = 0
+                for offset in range(-50, 51):  # 滑动窗口范围
+                    start_y = max(0, self.fixed_top_height + offset)
+                    end_y = min(current_frame.shape[0] - self.fixed_bottom_height, start_y + ref_region.shape[0])
+                    
+                    if end_y - start_y < ref_region.shape[0] * 0.5:
+                        continue
+                    
+                    curr_region = current_frame[start_y:end_y]
+                    overlap_ratio = self.compute_overlap_ratio(ref_region, curr_region)
+                    
+                    if overlap_ratio > best_overlap_ratio:
+                        best_overlap_ratio = overlap_ratio
+                        best_position = start_y
+                
+                overlap_ratios.append(best_overlap_ratio)
+                positions.append(best_position)
+            
+            # 记录详细的重叠比例信息
+            self.log(f"Overlap ratios: {overlap_ratios}")
+            
+            # 创建带标注的对比图像
+            comparison_image = self.create_comparison_visualization(
+                reference_regions, current_frame, overlap_ratios, positions)
+            
+            # 判断内容是否真正消失（所有区域的重叠比例都很低）
+            content_changed = all(ratio < 0.2 for ratio in overlap_ratios)  # 设定重叠比例阈值
+            max_overlap_ratio = max(overlap_ratios)
+            
+            return content_changed, max_overlap_ratio, comparison_image
+
+        except Exception as e:
+            self.log(f"Error in check_content_changed: {str(e)}")
             import traceback
             self.log(traceback.format_exc())
             raise
