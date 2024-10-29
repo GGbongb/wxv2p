@@ -88,71 +88,117 @@ class VideoProcessThread(QThread):
         
         return top_region, mid_region, bottom_region
 
-    def check_content_changed(self, reference_regions, current_regions):
+    def compute_similarity_with_sliding_window(self, ref_region, curr_frame, max_offset=50):
+        """使用滑动窗口计算最佳匹配位置和相似度"""
+        try:
+            height = curr_frame.shape[0]
+            ref_height = ref_region.shape[0]
+            best_similarity = 0
+            best_position = 0
+            
+            # 在当前帧中上下滑动搜索参考区域
+            for offset in range(-max_offset, max_offset + 1):
+                start_y = max(0, self.fixed_top_height + offset)
+                end_y = min(height - self.fixed_bottom_height, start_y + ref_height)
+                
+                if end_y - start_y < ref_height * 0.5:  # 确保有足够的重叠区域
+                    continue
+                    
+                curr_region = curr_frame[start_y:end_y]
+                if curr_region.shape[0] != ref_region.shape[0]:
+                    curr_region = cv2.resize(curr_region, (ref_region.shape[1], ref_region.shape[0]))
+                
+                similarity = self.compute_similarity(ref_region, curr_region)
+                
+                if similarity > best_similarity:
+                    best_similarity = similarity
+                    best_position = start_y
+            
+            return best_similarity, best_position
+        
+        except Exception as e:
+            self.log(f"Error in compute_similarity_with_sliding_window: {str(e)}")
+            import traceback
+            self.log(traceback.format_exc())
+            raise
+
+    def check_content_changed(self, reference_regions, current_frame):
         """检查参考内容是否真正消失"""
         try:
             ref_top, ref_mid, ref_bottom = reference_regions
-            curr_top, curr_mid, curr_bottom = current_regions
             
-            # 计算每个参考区域与当前帧各区域的相似度
-            region_similarities = []  # 存储每个参考区域的相似度列表
-            max_similarities = []     # 存储每个参考区域的最大相似度
-            
-            for ref_idx, ref_region in enumerate([ref_top, ref_mid, ref_bottom]):
-                curr_sims = []
-                for curr_region in [curr_top, curr_mid, curr_bottom]:
-                    sim = self.compute_similarity(ref_region, curr_region)
-                    curr_sims.append(sim)
-                region_similarities.append(curr_sims)
-                max_similarities.append(max(curr_sims))
+            # 对每个参考区域在当前帧中进行滑动窗口匹配
+            region_results = []
+            positions = []
+            for ref_region in [ref_top, ref_mid, ref_bottom]:
+                similarity, position = self.compute_similarity_with_sliding_window(
+                    ref_region, current_frame)
+                region_results.append(similarity)
+                positions.append(position)
             
             # 记录详细的相似度信息
-            self.log(f"Reference top region similarities: {region_similarities[0]}")
-            self.log(f"Reference mid region similarities: {region_similarities[1]}")
-            self.log(f"Reference bottom region similarities: {region_similarities[2]}")
+            self.log(f"Region similarities with sliding window: {region_results}")
+            self.log(f"Best matching positions: {positions}")
             
-            # 创建带标注的对比图像
-            ref_combined = np.vstack((ref_top, ref_mid, ref_bottom))
-            curr_combined = np.vstack((curr_top, curr_mid, curr_bottom))
-            comparison_image = np.hstack((ref_combined, curr_combined))
+            # 创建可视化对比图像
+            comparison_image = self.create_comparison_visualization(
+                reference_regions, current_frame, region_results, positions)
             
-            # 添加区域标注和相似度信息
-            font = cv2.FONT_HERSHEY_SIMPLEX
-            height_per_region = ref_combined.shape[0] // 3
-            
-            # 在参考区域添加标注
-            for i, region_name in enumerate(["Top", "Mid", "Bottom"]):
-                y_pos = i * height_per_region + 30
-                cv2.putText(comparison_image, f"Ref {region_name}", 
-                        (10, y_pos), font, 0.7, (0, 255, 0), 2)
-                
-                # 添加该参考区域与所有当前区域的相似度
-                for j, sim in enumerate(region_similarities[i]):
-                    y_text = y_pos + (j + 1) * 25
-                    cv2.putText(comparison_image, f"->Curr_{j}: {sim:.4f}", 
-                            (10, y_text), font, 0.6, (0, 0, 255), 1)
-            
-            # 在当前区域添加标注
-            width_half = comparison_image.shape[1] // 2
-            for i, region_name in enumerate(["Top", "Mid", "Bottom"]):
-                y_pos = i * height_per_region + 30
-                cv2.putText(comparison_image, f"Curr {region_name}", 
-                        (width_half + 10, y_pos), font, 0.7, (0, 255, 0), 2)
-            
-            # 添加分隔线
-            for i in range(1, 3):
-                y_line = i * height_per_region
-                cv2.line(comparison_image, (0, y_line), 
-                        (comparison_image.shape[1], y_line), (0, 255, 0), 2)
-            
-            # 判断内容是否真正消失
-            content_changed = all(sim < self.similarity_threshold for sim in max_similarities)
-            max_similarity = max(max_similarities)
+            # 判断内容是否真正消失（所有区域的最佳匹配相似度都很低）
+            content_changed = all(sim < self.similarity_threshold for sim in region_results)
+            max_similarity = max(region_results)
             
             return content_changed, max_similarity, comparison_image
 
         except Exception as e:
             self.log(f"Error in check_content_changed: {str(e)}")
+            import traceback
+            self.log(traceback.format_exc())
+            raise
+
+    def create_comparison_visualization(self, reference_regions, current_frame, similarities, positions):
+        """创建带有详细标注的对比图像"""
+        try:
+            ref_top, ref_mid, ref_bottom = reference_regions
+            height = current_frame.shape[0]
+            width = current_frame.shape[1]
+            
+            # 创建参考区域的组合图像
+            ref_combined = np.vstack(reference_regions)
+            
+            # 调整参考区域组合图像的大小，使其高度与当前帧匹配
+            ref_combined = cv2.resize(ref_combined, (width, height))
+            
+            # 在当前帧中标记匹配位置
+            marked_frame = current_frame.copy()
+            for i, (pos, sim) in enumerate(zip(positions, similarities)):
+                ref_height = reference_regions[i].shape[0]
+                # 绘制匹配区域的框
+                cv2.rectangle(marked_frame, 
+                            (0, pos), 
+                            (marked_frame.shape[1], pos + ref_height),
+                            (0, 255, 0), 2)
+                # 添加相似度标注
+                cv2.putText(marked_frame, 
+                        f"Sim: {sim:.4f}", 
+                        (10, pos + 20), 
+                        cv2.FONT_HERSHEY_SIMPLEX, 
+                        0.6, (0, 0, 255), 2)
+            
+            # 将参考区域和标记后的当前帧并排显示
+            comparison_image = np.hstack((ref_combined, marked_frame))
+            
+            # 添加标题和说明
+            font = cv2.FONT_HERSHEY_SIMPLEX
+            cv2.putText(comparison_image, "Reference Regions", 
+                    (10, 30), font, 1, (0, 255, 0), 2)
+            cv2.putText(comparison_image, "Current Frame (with matching)", 
+                    (width + 10, 30), font, 1, (0, 255, 0), 2)
+            
+            return comparison_image
+
+        except Exception as e:
+            self.log(f"Error in create_comparison_visualization: {str(e)}")
             import traceback
             self.log(traceback.format_exc())
             raise
@@ -185,9 +231,9 @@ class VideoProcessThread(QThread):
                         continue
                     skip_count = 0
 
-                    current_regions = self.get_content_regions(frame)
+                    # 直接传入当前帧，而不是regions
                     changed, similarity, comparison_image = self.check_content_changed(
-                        reference_regions, current_regions)
+                        reference_regions, frame)  # 修改这里
                     
                     status = f"Similarity_{similarity:.4f}"
                     self.save_comparison_image(comparison_image, i, status)
