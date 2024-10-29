@@ -150,16 +150,24 @@ class VideoProcessThread(QThread):
             height = current_frame.shape[0]
             width = current_frame.shape[1]
             
+            # 裁剪当前帧，去掉顶部和底部固定区域
+            content_start = self.fixed_top_height
+            content_end = height - self.fixed_bottom_height
+            current_content = current_frame[content_start:content_end].copy()
+            
             # 创建参考区域的组合图像
             ref_combined = np.vstack(reference_regions)
             
-            # 调整参考区域组合图像的大小，使其高度与当前帧匹配
-            ref_combined = cv2.resize(ref_combined, (width, height))
+            # 调整参考区域组合图像的大小，使其高度与当前内容区域匹配
+            ref_combined = cv2.resize(ref_combined, (width, content_end - content_start))
             
-            # 在当前帧中标记重叠比例和匹配位置
-            marked_frame = current_frame.copy()
+            # 在当前内容区域中标记重叠比例和匹配位置
+            marked_content = current_content.copy()
             for i, (ratio, pos) in enumerate(zip(overlap_ratios, positions)):
                 ref_height = reference_regions[i].shape[0]
+                # 调整位置以适应裁剪后的坐标系统
+                adjusted_pos = pos - content_start
+                
                 # 绘制参考区域的框
                 cv2.rectangle(ref_combined, 
                              (0, i * ref_height), 
@@ -167,26 +175,26 @@ class VideoProcessThread(QThread):
                              (255, 0, 0), 2)  # 蓝色框表示参考区域
                 
                 # 绘制匹配区域的框
-                cv2.rectangle(marked_frame, 
-                             (0, pos), 
-                             (width, pos + ref_height),
-                             (0, 255, 0), 2)  # 绿色框表示匹配区域
+                cv2.rectangle(marked_content, 
+                             (0, adjusted_pos), 
+                             (width, adjusted_pos + ref_height),
+                             (0, 255, 0), 2)  # 绿���框表示匹配区域
                 
                 # 添加重叠比例标注
-                cv2.putText(marked_frame, 
+                cv2.putText(marked_content, 
                            f"Overlap: {ratio:.2f}", 
-                           (10, pos + 20), 
+                           (10, adjusted_pos + 20), 
                            cv2.FONT_HERSHEY_SIMPLEX, 
                            0.6, (0, 0, 255), 2)
             
-            # 将参考区域和标记后的当前帧并排显示
-            comparison_image = np.hstack((ref_combined, marked_frame))
+            # 将参考区域和标记后的当前内容区域并排显示
+            comparison_image = np.hstack((ref_combined, marked_content))
             
             # 添加标题和说明
             font = cv2.FONT_HERSHEY_SIMPLEX
             cv2.putText(comparison_image, "Reference Regions", 
                        (10, 30), font, 1, (0, 255, 0), 2)
-            cv2.putText(comparison_image, "Current Frame (with overlap)", 
+            cv2.putText(comparison_image, "Current Content (with overlap)", 
                        (width + 10, 30), font, 1, (0, 255, 0), 2)
             
             return comparison_image
@@ -197,53 +205,95 @@ class VideoProcessThread(QThread):
             self.log(traceback.format_exc())
             raise
 
+    def compute_disappearance_ratio(self, ref_region, current_content):
+        """计算参考区域在当前内容中的消失度"""
+        try:
+            # 将区域分成多个小块（例如：10个）进行检测
+            num_blocks = 10
+            block_height = ref_region.shape[0] // num_blocks
+            disappearance_count = 0
+            
+            # 对每个小块计算存在程度
+            for i in range(num_blocks):
+                start_y = i * block_height
+                end_y = (i + 1) * block_height
+                ref_block = ref_region[start_y:end_y]
+                
+                # 在当前内容中寻找这个小块
+                block_found = False
+                for offset in range(-30, 31):  # 小范围滑动窗口
+                    curr_start = max(0, start_y + offset)
+                    curr_end = min(current_content.shape[0], curr_start + block_height)
+                    
+                    if curr_end - curr_start < block_height:
+                        continue
+                        
+                    curr_block = current_content[curr_start:curr_end]
+                    if curr_block.shape[0] != ref_block.shape[0]:
+                        curr_block = cv2.resize(curr_block, (ref_block.shape[1], ref_block.shape[0]))
+                    
+                    similarity = self.compute_similarity(ref_block, curr_block)
+                    if similarity > 0.7:  # 较高的相似度阈值
+                        block_found = True
+                        break
+                
+                if not block_found:
+                    disappearance_count += 1
+            
+            # 计算消失度
+            disappearance_ratio = disappearance_count / num_blocks
+            return disappearance_ratio
+            
+        except Exception as e:
+            self.log(f"Error in compute_disappearance_ratio: {str(e)}")
+            import traceback
+            self.log(traceback.format_exc())
+            raise
+
     def check_content_changed(self, reference_regions, current_frame):
         """检查参考内容是否真正消失"""
         try:
             ref_top, ref_mid, ref_bottom = reference_regions
             
-            # 对每个参考区域在当前帧中进行滑动窗口匹配
-            overlap_ratios = []
-            positions = []
+            # 裁剪当前帧的内容区域
+            content_start = self.fixed_top_height
+            content_end = current_frame.shape[0] - self.fixed_bottom_height
+            current_content = current_frame[content_start:content_end]
+            
+            # 计算每个区域的消失度
+            disappearance_ratios = []
             for ref_region in [ref_top, ref_mid, ref_bottom]:
-                best_overlap_ratio = 0
-                best_position = 0
-                for offset in range(-50, 51):  # 滑动窗口范围
-                    start_y = max(0, self.fixed_top_height + offset)
-                    end_y = min(current_frame.shape[0] - self.fixed_bottom_height, start_y + ref_region.shape[0])
-                    
-                    if end_y - start_y < ref_region.shape[0] * 0.5:
-                        continue
-                    
-                    curr_region = current_frame[start_y:end_y]
-                    overlap_ratio = self.compute_overlap_ratio(ref_region, curr_region)
-                    
-                    if overlap_ratio > best_overlap_ratio:
-                        best_overlap_ratio = overlap_ratio
-                        best_position = start_y
-                
-                overlap_ratios.append(best_overlap_ratio)
-                positions.append(best_position)
+                ratio = self.compute_disappearance_ratio(ref_region, current_content)
+                disappearance_ratios.append(ratio)
             
-            # 记录详细的重叠比例信息
-            self.log(f"Overlap ratios: {overlap_ratios}")
+            # 记录消失度信息
+            self.log(f"Disappearance ratios [top, mid, bot]: {disappearance_ratios}")
             
-            # 创建带标注的对比图像
+            # 创建可视化结果
             comparison_image = self.create_comparison_visualization(
-                reference_regions, current_frame, overlap_ratios, positions)
+                reference_regions, current_frame, disappearance_ratios)
             
-            # 判断内容是否真正消失（所有区域的重叠比例都很低）
-            content_changed = all(ratio < 0.2 for ratio in overlap_ratios)  # 设定重叠比例阈值
-            max_overlap_ratio = max(overlap_ratios)
+            # 判断内容是否真正消失
+            # 1. 顶部区域基本消失
+            # 2. 中部区域大部分消失
+            # 3. 底部区域开始消失
+            # 4. 消失度呈递减趋势
+            content_changed = (
+                disappearance_ratios[0] > 0.9 and  # 顶部消失度 > 90%
+                disappearance_ratios[1] > 0.7 and  # 中部消失度 > 70%
+                disappearance_ratios[2] > 0.2 and  # 底部消失度 > 20%
+                disappearance_ratios[0] > disappearance_ratios[1] > disappearance_ratios[2]  # 递减趋势
+            )
             
-            return content_changed, max_overlap_ratio, comparison_image
+            max_disappearance = max(disappearance_ratios)
+            
+            return content_changed, max_disappearance, comparison_image
 
         except Exception as e:
             self.log(f"Error in check_content_changed: {str(e)}")
             import traceback
             self.log(traceback.format_exc())
             raise
-
     def run(self):
         try:
             cap = cv2.VideoCapture(self.video_path)
