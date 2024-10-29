@@ -143,7 +143,7 @@ class VideoProcessThread(QThread):
         overlap_ratio = overlap_area / ref_area if ref_area > 0 else 0
         return overlap_ratio
 
-    def create_comparison_visualization(self, reference_regions, current_frame, overlap_ratios, positions):
+    def create_comparison_visualization(self, reference_regions, current_frame, disappearance_ratios):
         """创建带有详细标注的对比图像"""
         try:
             ref_top, ref_mid, ref_bottom = reference_regions
@@ -161,12 +161,11 @@ class VideoProcessThread(QThread):
             # 调整参考区域组合图像的大小，使其高度与当前内容区域匹配
             ref_combined = cv2.resize(ref_combined, (width, content_end - content_start))
             
-            # 在当前内容区域中标记重叠比例和匹配位置
+            # 在当前内容区域中标记消失度
             marked_content = current_content.copy()
-            for i, (ratio, pos) in enumerate(zip(overlap_ratios, positions)):
+            for i, ratio in enumerate(disappearance_ratios):
                 ref_height = reference_regions[i].shape[0]
-                # 调整位置以适应裁剪后的坐标系统
-                adjusted_pos = pos - content_start
+                y_pos = i * (current_content.shape[0] // 3)  # 平均分配高度
                 
                 # 绘制参考区域的框
                 cv2.rectangle(ref_combined, 
@@ -174,16 +173,21 @@ class VideoProcessThread(QThread):
                              (width, (i + 1) * ref_height),
                              (255, 0, 0), 2)  # 蓝色框表示参考区域
                 
-                # 绘制匹配区域的框
+                # 绘制当前区域的框，颜色根据消失度变化
+                color = (
+                    0,  # B
+                    int(255 * (1 - ratio)),  # G（消失度越高越少绿色）
+                    int(255 * ratio)  # R（消失度越高越多红色）
+                )
                 cv2.rectangle(marked_content, 
-                             (0, adjusted_pos), 
-                             (width, adjusted_pos + ref_height),
-                             (0, 255, 0), 2)  # 绿���框表示匹配区域
+                             (0, y_pos), 
+                             (width, y_pos + ref_height),
+                             color, 2)
                 
-                # 添加重叠比例标注
+                # 添加消失度标注
                 cv2.putText(marked_content, 
-                           f"Overlap: {ratio:.2f}", 
-                           (10, adjusted_pos + 20), 
+                           f"Disappeared: {ratio:.2f}", 
+                           (10, y_pos + 20), 
                            cv2.FONT_HERSHEY_SIMPLEX, 
                            0.6, (0, 0, 255), 2)
             
@@ -194,7 +198,7 @@ class VideoProcessThread(QThread):
             font = cv2.FONT_HERSHEY_SIMPLEX
             cv2.putText(comparison_image, "Reference Regions", 
                        (10, 30), font, 1, (0, 255, 0), 2)
-            cv2.putText(comparison_image, "Current Content (with overlap)", 
+            cv2.putText(comparison_image, "Current Content (with disappearance)", 
                        (width + 10, 30), font, 1, (0, 255, 0), 2)
             
             return comparison_image
