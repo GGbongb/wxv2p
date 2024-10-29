@@ -18,11 +18,12 @@ class VideoProcessThread(QThread):
         os.makedirs(self.debug_output_dir, exist_ok=True)
         os.makedirs(self.repeat_region_dir, exist_ok=True)
         
+        # 调整参数
         self.fixed_top_height = 120
         self.fixed_bottom_height = 70
-        self.content_height = 180  # 内容检测区域高度
-        self.similarity_threshold = 0.8  # 相似度阈值
-        self.reserve_ratio = 0.2   # 预留比例，20%
+        self.content_height = 240  # 增加检测区域高度
+        self.similarity_threshold = 0.6  # 降低阈值，因为我们会使用更严格的检测逻辑
+        self.ignore_edge_pixels = 20  # 忽略边缘像素，避免按钮干扰
 
     def setup_logging(self):
         self.logger = logging.getLogger('VideoProcessThread')
@@ -37,7 +38,7 @@ class VideoProcessThread(QThread):
         self.log_message.emit(message)
 
     def compute_similarity(self, img1, img2):
-        """计算两个图像的相似度"""
+        """改进的相似度计算方法"""
         if img1 is None or img2 is None:
             raise ValueError("One of the input images is None")
         
@@ -52,11 +53,24 @@ class VideoProcessThread(QThread):
         if len(img2.shape) == 3:
             img2 = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)
         
-        # 应用自适应阈值，减少光照影响
+        # 忽略边缘区域
+        img1 = img1[:, self.ignore_edge_pixels:-self.ignore_edge_pixels]
+        img2 = img2[:, self.ignore_edge_pixels:-self.ignore_edge_pixels]
+        
+        # 应用高斯模糊减少噪声
+        img1 = cv2.GaussianBlur(img1, (3, 3), 0)
+        img2 = cv2.GaussianBlur(img2, (3, 3), 0)
+        
+        # 应用自适应阈值
         img1_thresh = cv2.adaptiveThreshold(img1, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
                                           cv2.THRESH_BINARY, 11, 2)
         img2_thresh = cv2.adaptiveThreshold(img2, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
                                           cv2.THRESH_BINARY, 11, 2)
+        
+        # 形态学操作去除小噪点
+        kernel = np.ones((2,2), np.uint8)
+        img1_thresh = cv2.morphologyEx(img1_thresh, cv2.MORPH_OPEN, kernel)
+        img2_thresh = cv2.morphologyEx(img2_thresh, cv2.MORPH_OPEN, kernel)
         
         # 计算相似度
         result = cv2.matchTemplate(img1_thresh, img2_thresh, cv2.TM_CCOEFF_NORMED)
@@ -74,26 +88,32 @@ class VideoProcessThread(QThread):
         
         return top_region, mid_region, bottom_region
 
-    def check_content_disappeared(self, last_regions, current_regions):
-        """检查内容是否消失（上移）"""
+    def check_content_disappeared(self, first_regions, current_regions):
+        """改进的内容消失检测"""
         try:
-            last_top, last_mid, last_bottom = last_regions
+            first_top, first_mid, first_bottom = first_regions
             curr_top, curr_mid, curr_bottom = current_regions
             
-            # 计算last_bottom与curr_top的相似度
-            similarity = self.compute_similarity(last_bottom, curr_top)
+            # 计算多个区域的相似度
+            top_similarity = self.compute_similarity(first_bottom, curr_top)
+            mid_similarity = self.compute_similarity(first_bottom, curr_mid)
             
-            # 如果相似度低于阈值，说明内容已经完全上移（消失）
-            content_disappeared = similarity < self.similarity_threshold
+            # 记录详细信息
+            self.log(f"Top similarity: {top_similarity:.4f}")
+            self.log(f"Mid similarity: {mid_similarity:.4f}")
+            
+            # 如果内容向上移动，top_similarity 应该很低，而 mid_similarity 可能还有一些相似
+            content_disappeared = (top_similarity < self.similarity_threshold and 
+                                 mid_similarity < self.similarity_threshold * 1.2)
             
             # 创建对比图像
             comparison_image = np.vstack([
-                np.hstack((last_top, curr_top)),
-                np.hstack((last_mid, curr_mid)),
-                np.hstack((last_bottom, curr_bottom))
+                np.hstack((first_top, curr_top)),
+                np.hstack((first_mid, curr_mid)),
+                np.hstack((first_bottom, curr_bottom))
             ])
             
-            return content_disappeared, similarity, comparison_image
+            return content_disappeared, top_similarity, comparison_image
 
         except Exception as e:
             self.log(f"Error in check_content_disappeared: {str(e)}")
@@ -108,7 +128,8 @@ class VideoProcessThread(QThread):
             self.log(f"Total frames: {total_frames}")
 
             frames = []
-            last_regions = None
+            first_regions = None
+            skip_count = 0  # 添加跳帧计数
 
             for i in range(total_frames):
                 try:
@@ -118,20 +139,26 @@ class VideoProcessThread(QThread):
 
                     if len(frames) == 0:
                         frames.append(frame)
-                        last_regions = self.get_content_regions(frame)
+                        first_regions = self.get_content_regions(frame)
                         self.save_debug_frame(frame, i, "First")
                         continue
 
+                    # 每隔几帧检查一次，减少计算量
+                    skip_count += 1
+                    if skip_count < 3:  # 每3帧检查一次
+                        continue
+                    skip_count = 0
+
                     current_regions = self.get_content_regions(frame)
                     disappeared, similarity, comparison_image = self.check_content_disappeared(
-                        last_regions, current_regions)
+                        first_regions, current_regions)
                     
                     status = f"Similarity_{similarity:.4f}"
                     self.save_comparison_image(comparison_image, i, status)
                     
                     if disappeared:
                         frames.append(frame)
-                        last_regions = self.get_content_regions(frame)
+                        first_regions = self.get_content_regions(frame)
                         self.log(f"Content disappeared, captured frame {len(frames)}")
                         self.save_debug_frame(frame, i, f"Frame_{len(frames)}")
                     else:
@@ -197,7 +224,7 @@ class VideoProcessThread(QThread):
             width = comparison_image.shape[1]
             
             # 在图像上添加标注
-            cv2.putText(comparison_image, "Last Frame", (10, 30), font, 1, (0, 255, 0), 2)
+            cv2.putText(comparison_image, "First Frame", (10, 30), font, 1, (0, 255, 0), 2)
             cv2.putText(comparison_image, "Current Frame", (width//2 + 10, 30), font, 1, (0, 255, 0), 2)
             cv2.putText(comparison_image, status, (10, height - 10), font, 0.7, (0, 0, 255), 2)
             
