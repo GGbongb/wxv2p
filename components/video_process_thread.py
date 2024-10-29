@@ -94,28 +94,60 @@ class VideoProcessThread(QThread):
             ref_top, ref_mid, ref_bottom = reference_regions
             curr_top, curr_mid, curr_bottom = current_regions
             
-            # 计算参考内容在当前帧各个区域的相似度
-            similarities = []
-            for ref_region in [ref_top, ref_mid, ref_bottom]:
-                region_similarities = []
+            # 计算每个参考区域与当前帧各区域的相似度
+            region_similarities = []  # 存储每个参考区域的相似度列表
+            max_similarities = []     # 存储每个参考区域的最大相似度
+            
+            for ref_idx, ref_region in enumerate([ref_top, ref_mid, ref_bottom]):
+                curr_sims = []
                 for curr_region in [curr_top, curr_mid, curr_bottom]:
                     sim = self.compute_similarity(ref_region, curr_region)
-                    region_similarities.append(sim)
-                similarities.append(max(region_similarities))
-                
-            # 记录相似度信息
-            self.log(f"Region similarities: {similarities}")
+                    curr_sims.append(sim)
+                region_similarities.append(curr_sims)
+                max_similarities.append(max(curr_sims))
             
-            # 只有当所有原始内容都几乎看不到时（相似度都很低），才认为内容真正消失
-            content_changed = all(sim < self.similarity_threshold for sim in similarities)
+            # 记录详细的相似度信息
+            self.log(f"Reference top region similarities: {region_similarities[0]}")
+            self.log(f"Reference mid region similarities: {region_similarities[1]}")
+            self.log(f"Reference bottom region similarities: {region_similarities[2]}")
             
-            # 创建对比图像
+            # 创建带标注的对比图像
             ref_combined = np.vstack((ref_top, ref_mid, ref_bottom))
             curr_combined = np.vstack((curr_top, curr_mid, curr_bottom))
             comparison_image = np.hstack((ref_combined, curr_combined))
             
-            # 返回最大相似度用于显示
-            max_similarity = max(similarities)
+            # 添加区域标注和相似度信息
+            font = cv2.FONT_HERSHEY_SIMPLEX
+            height_per_region = ref_combined.shape[0] // 3
+            
+            # 在参考区域添加标注
+            for i, region_name in enumerate(["Top", "Mid", "Bottom"]):
+                y_pos = i * height_per_region + 30
+                cv2.putText(comparison_image, f"Ref {region_name}", 
+                        (10, y_pos), font, 0.7, (0, 255, 0), 2)
+                
+                # 添加该参考区域与所有当前区域的相似度
+                for j, sim in enumerate(region_similarities[i]):
+                    y_text = y_pos + (j + 1) * 25
+                    cv2.putText(comparison_image, f"->Curr_{j}: {sim:.4f}", 
+                            (10, y_text), font, 0.6, (0, 0, 255), 1)
+            
+            # 在当前区域添加标注
+            width_half = comparison_image.shape[1] // 2
+            for i, region_name in enumerate(["Top", "Mid", "Bottom"]):
+                y_pos = i * height_per_region + 30
+                cv2.putText(comparison_image, f"Curr {region_name}", 
+                        (width_half + 10, y_pos), font, 0.7, (0, 255, 0), 2)
+            
+            # 添加分隔线
+            for i in range(1, 3):
+                y_line = i * height_per_region
+                cv2.line(comparison_image, (0, y_line), 
+                        (comparison_image.shape[1], y_line), (0, 255, 0), 2)
+            
+            # 判断内容是否真正消失
+            content_changed = all(sim < self.similarity_threshold for sim in max_similarities)
+            max_similarity = max(max_similarities)
             
             return content_changed, max_similarity, comparison_image
 
