@@ -18,7 +18,7 @@ class VideoProcessThread(QThread):
         
         # 移除固定区域的限制
         self.reference_frame = None
-        self.movement_threshold = 650  # 移动阈值
+        self.movement_threshold = 600  # 移动阈值
         
         # 特征点追踪参数
         self.max_corners = 200  # 增加特征点数量
@@ -139,8 +139,6 @@ class VideoProcessThread(QThread):
             frame_count = 0
             accumulated_movement = 0
             extracted_frames = []
-            
-            # 添加移动方向检查
             last_movement = 0
             movement_direction_changes = 0
 
@@ -149,28 +147,29 @@ class VideoProcessThread(QThread):
                 if not ret:
                     break
 
-                if prev_frame is not None:
-                    # 计算移动距离
+                # 保存第一帧
+                if prev_frame is None:
+                    self.reference_frame = frame.copy()
+                    extracted_frames.append(frame.copy())  # 添加这行，保存第一帧
+                    self.log("First frame captured")
+                else:
+                    # 其余代码保持不变
                     movement = self.calculate_movement(prev_frame, frame)
                     
-                    # 检查移动方向变化
-                    if last_movement * movement < 0:  # 方向改变
+                    if last_movement * movement < 0:
                         movement_direction_changes += 1
                     last_movement = movement
                     
-                    # 重置方向变化计数
-                    if movement_direction_changes > 3:  # 如果方向变化太频繁，可能是抖动
+                    if movement_direction_changes > 3:
                         movement = 0
                         movement_direction_changes = 0
                     
                     accumulated_movement += movement
                     
-                    # 创建可视化图像
                     vis_image = self.create_tracking_visualization(frame, accumulated_movement)
                     if vis_image is not None:
                         cv2.imwrite(f"{self.debug_output_dir}/tracking_{frame_count:04d}.jpg", vis_image)
                     
-                    # 检查是否需要提取新图片
                     if accumulated_movement >= self.movement_threshold:
                         self.reference_frame = frame.copy()
                         accumulated_movement = 0
@@ -181,7 +180,6 @@ class VideoProcessThread(QThread):
                 prev_frame = frame.copy()
                 frame_count += 1
                 
-                # 发送进度信号
                 progress = int((frame_count / total_frames) * 100)
                 self.progress.emit(progress)
 
