@@ -37,6 +37,10 @@ class VideoProcessThread(QThread):
     def log(self, message):
         self.logger.info(message)
         self.log_message.emit(message)
+    
+    def calculate_speed(self, movement, fps=30):
+        """计算页面滑动速度（像素/秒）"""
+        return abs(movement * fps)
 
     def create_tracking_visualization(self, curr_frame, accumulated_movement):
         """创建改进的可视化效果"""
@@ -78,6 +82,11 @@ class VideoProcessThread(QThread):
         except Exception as e:
             self.log(f"Error in create_tracking_visualization: {str(e)}")
             return None
+        # 添加速度信息
+        cv2.putText(vis_image, 
+                    f"Speed: {current_speed:.1f} px/s", 
+                    (mid_x - 100, 90), 
+                    font, 0.7, (255, 165, 0), 2)  # 橙色显示速度
 
     def calculate_movement(self, prev_frame, curr_frame):
         """计算两帧之间的移动距离，增加鲁棒性"""
