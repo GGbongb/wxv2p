@@ -49,7 +49,7 @@ class VideoProcessThread(QThread):
             # 使用Shi-Tomasi角点检测
             features = cv2.goodFeaturesToTrack(
                 prev_content,
-                maxCorners=100,  # 最多检测100个特征点
+                maxCorners=100,
                 qualityLevel=0.3,
                 minDistance=7,
                 blockSize=7
@@ -73,50 +73,49 @@ class VideoProcessThread(QThread):
             # 计算特征点的位移
             displacements = []
             
-            # 绘制特征点和追踪线
+            # 计算有效的位移
             for i, (new, old) in enumerate(zip(next_features, features)):
                 if status[i]:
-                    a, b = new.ravel()  # 当前帧中的位置
-                    c, d = old.ravel()  # 上一帧中的位置
-                    
-                    # 计算垂直位移
-                    displacement = b - d
+                    displacement = new[0][1] - old[0][1]  # 只关注y方向的位移
                     displacements.append(displacement)
-                    
-                    # 在左侧图像上绘制起点
-                    cv2.circle(vis_image, (int(c), int(d)), 3, (0, 255, 0), -1)
-                    
-                    # 在右侧图像上绘制终点
-                    cv2.circle(vis_image, (int(a) + prev_frame.shape[1], int(b)), 3, (0, 0, 255), -1)
-                    
-                    # 绘制追踪线
-                    cv2.line(vis_image, 
-                            (int(c), int(d)), 
-                            (int(a) + prev_frame.shape[1], int(b)), 
-                            (255, 0, 0), 1)
             
-            # 计算位移统计信息
             if displacements:
+                # 计算平均位移
                 mean_displacement = np.mean(displacements)
-                max_displacement = np.max(displacements)
-                min_displacement = np.min(displacements)
                 
-                # 添加统计信息到图像
+                # 在两个图像中画垂直线表示移动
+                # 左图：从底部到顶部的红线
+                start_y = curr_frame.shape[0] - self.fixed_bottom_height
+                end_y = start_y - abs(mean_displacement)
+                mid_x = prev_frame.shape[1] // 2
+                
+                # 在左图画线
+                cv2.line(vis_image, 
+                        (mid_x, int(start_y)), 
+                        (mid_x, int(end_y)), 
+                        (0, 0, 255), 2)  # 红色线
+                
+                # 在右图画线
+                cv2.line(vis_image, 
+                        (mid_x + prev_frame.shape[1], int(start_y)), 
+                        (mid_x + prev_frame.shape[1], int(end_y)), 
+                        (0, 255, 0), 2)  # 绿色线
+                
+                # 添加位移信息
                 font = cv2.FONT_HERSHEY_SIMPLEX
-                cv2.putText(vis_image, f"Mean: {mean_displacement:.1f}px", 
+                cv2.putText(vis_image, 
+                           f"Displacement: {abs(mean_displacement):.1f}px", 
                            (10, 30), font, 0.7, (0, 255, 0), 2)
-                cv2.putText(vis_image, f"Max: {max_displacement:.1f}px", 
-                           (10, 60), font, 0.7, (0, 255, 0), 2)
-                cv2.putText(vis_image, f"Min: {min_displacement:.1f}px", 
-                           (10, 90), font, 0.7, (0, 255, 0), 2)
                 
-                # 绘制可变区域边界
-                cv2.line(vis_image, (0, content_start), 
+                # 画出固定区域的边界线
+                cv2.line(vis_image, 
+                        (0, content_start), 
                         (vis_image.shape[1], content_start), 
-                        (0, 255, 255), 1)
-                cv2.line(vis_image, (0, content_end), 
+                        (255, 255, 0), 1)  # 黄色线
+                cv2.line(vis_image, 
+                        (0, content_end), 
                         (vis_image.shape[1], content_end), 
-                        (0, 255, 255), 1)
+                        (255, 255, 0), 1)  # 黄色线
             
             return vis_image
 
