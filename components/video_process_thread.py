@@ -16,11 +16,15 @@ class VideoProcessThread(QThread):
         self.debug_output_dir = "debug_output"
         os.makedirs(self.debug_output_dir, exist_ok=True)
         
-        # 调整参数
-        self.fixed_top_height = 120
-        self.fixed_bottom_height = 70
-        self.reference_frame = None  # 存储参考帧
-        self.movement_threshold = 600  # 移动距离阈值，超过这个值就提取新的参考帧
+        # 移除固定区域的限制
+        self.reference_frame = None
+        self.movement_threshold = 650  # 移动阈值
+        
+        # 特征点追踪参数
+        self.max_corners = 200  # 增加特征点数量
+        self.quality_level = 0.3
+        self.min_distance = 7
+        self.block_size = 7
 
     def setup_logging(self):
         self.logger = logging.getLogger('VideoProcessThread')
@@ -35,7 +39,7 @@ class VideoProcessThread(QThread):
         self.log_message.emit(message)
 
     def create_tracking_visualization(self, curr_frame, accumulated_movement):
-        """创建参考帧和当前帧的对比可视化"""
+        """创建改进的可视化效果"""
         try:
             if self.reference_frame is None:
                 self.reference_frame = curr_frame.copy()
@@ -44,20 +48,17 @@ class VideoProcessThread(QThread):
             # 创建可视化图像
             vis_image = np.hstack((self.reference_frame, curr_frame))
             
-            # 获取可变区域
-            content_start = self.fixed_top_height
-            content_end = curr_frame.shape[0] - self.fixed_bottom_height
-            
             # 在当前帧中画垂直线表示累积移动距离
-            start_y = curr_frame.shape[0] - self.fixed_bottom_height
+            height = curr_frame.shape[0]
+            start_y = height  # 从底部开始
             end_y = start_y - accumulated_movement
-            mid_x = curr_frame.shape[1] // 2 + self.reference_frame.shape[1]  # 在右图中间
+            mid_x = curr_frame.shape[1] // 2 + self.reference_frame.shape[1]
             
             # 画移动距离线
             cv2.line(vis_image, 
                     (mid_x, int(start_y)), 
                     (mid_x, int(end_y)), 
-                    (0, 255, 0), 2)  # 绿色线
+                    (0, 255, 0), 2)
             
             # 添加移动距离信息
             font = cv2.FONT_HERSHEY_SIMPLEX
@@ -70,56 +71,33 @@ class VideoProcessThread(QThread):
             cv2.line(vis_image,
                     (self.reference_frame.shape[1], int(threshold_y)),
                     (vis_image.shape[1], int(threshold_y)),
-                    (0, 0, 255), 1)  # 红色阈值线
-            
-            # 画出固定区域的边界线
-            for x in [0, self.reference_frame.shape[1]]:
-                cv2.line(vis_image, 
-                        (x, content_start), 
-                        (x + self.reference_frame.shape[1], content_start), 
-                        (255, 255, 0), 1)  # 黄色线
-                cv2.line(vis_image, 
-                        (x, content_end), 
-                        (x + self.reference_frame.shape[1], content_end), 
-                        (255, 255, 0), 1)  # 黄色线
+                    (0, 0, 255), 1)
             
             return vis_image
 
         except Exception as e:
             self.log(f"Error in create_tracking_visualization: {str(e)}")
-            import traceback
-            self.log(traceback.format_exc())
             return None
 
     def calculate_movement(self, prev_frame, curr_frame):
-        """计算两帧之间的移动距离"""
+        """计算两帧之间的移动距离，增加鲁棒性"""
         try:
             # 转换为灰度图
             prev_gray = cv2.cvtColor(prev_frame, cv2.COLOR_BGR2GRAY)
             curr_gray = cv2.cvtColor(curr_frame, cv2.COLOR_BGR2GRAY)
             
-            # 获取可变区域
-            content_start = self.fixed_top_height
-            content_end = curr_frame.shape[0] - self.fixed_bottom_height
-            
-            # 在可变区域内检测特征点
-            prev_content = prev_gray[content_start:content_end, :]
-            
-            # 使用Shi-Tomasi角点检测
+            # 检测特征点
             features = cv2.goodFeaturesToTrack(
-                prev_content,
-                maxCorners=100,
-                qualityLevel=0.3,
-                minDistance=7,
-                blockSize=7
+                prev_gray,
+                maxCorners=self.max_corners,
+                qualityLevel=self.quality_level,
+                minDistance=self.min_distance,
+                blockSize=self.block_size
             )
             
-            if features is None:
+            if features is None or len(features) < 10:  # 确保有足够的特征点
                 return 0
                 
-            # 调整特征点坐标以匹配完整图像
-            features = np.array([[[pt[0][0], pt[0][1] + content_start]] for pt in features], dtype=np.float32)
-            
             # 使用光流法追踪特征点
             next_features, status, error = cv2.calcOpticalFlowPyrLK(
                 prev_gray, curr_gray, features, None
@@ -129,11 +107,21 @@ class VideoProcessThread(QThread):
             displacements = []
             for i, (new, old) in enumerate(zip(next_features, features)):
                 if status[i]:
-                    displacement = new[0][1] - old[0][1]  # 只关注y方向的位移
+                    displacement = new[0][1] - old[0][1]  # 垂直方向位移
                     displacements.append(displacement)
             
-            if displacements:
-                return abs(np.mean(displacements))  # 返回平均位移的绝对值
+            if not displacements:
+                return 0
+                
+            # 使用中位数来降低异常值影响
+            median_displacement = np.median(displacements)
+            
+            # 过滤掉偏离中位数过大的位移
+            filtered_displacements = [d for d in displacements 
+                                    if abs(d - median_displacement) < 20]  # 20px 阈值
+            
+            if filtered_displacements:
+                return abs(np.mean(filtered_displacements))
             return 0
 
         except Exception as e:
@@ -150,7 +138,11 @@ class VideoProcessThread(QThread):
             prev_frame = None
             frame_count = 0
             accumulated_movement = 0
-            extracted_frames = []  # 存储提取的帧
+            extracted_frames = []
+            
+            # 添加移动方向检查
+            last_movement = 0
+            movement_direction_changes = 0
 
             while True:
                 ret, frame = cap.read()
@@ -160,6 +152,17 @@ class VideoProcessThread(QThread):
                 if prev_frame is not None:
                     # 计算移动距离
                     movement = self.calculate_movement(prev_frame, frame)
+                    
+                    # 检查移动方向变化
+                    if last_movement * movement < 0:  # 方向改变
+                        movement_direction_changes += 1
+                    last_movement = movement
+                    
+                    # 重置方向变化计数
+                    if movement_direction_changes > 3:  # 如果方向变化太频繁，可能是抖动
+                        movement = 0
+                        movement_direction_changes = 0
+                    
                     accumulated_movement += movement
                     
                     # 创建可视化图像
@@ -167,12 +170,12 @@ class VideoProcessThread(QThread):
                     if vis_image is not None:
                         cv2.imwrite(f"{self.debug_output_dir}/tracking_{frame_count:04d}.jpg", vis_image)
                     
-                    # 检查是否需要更新参考帧和保存图片
+                    # 检查是否需要提取新图片
                     if accumulated_movement >= self.movement_threshold:
                         self.reference_frame = frame.copy()
                         accumulated_movement = 0
+                        movement_direction_changes = 0
                         self.log(f"New reference frame captured at frame {frame_count}")
-                        # 保存提取的帧
                         extracted_frames.append(frame.copy())
 
                 prev_frame = frame.copy()
@@ -183,7 +186,6 @@ class VideoProcessThread(QThread):
                 self.progress.emit(progress)
 
             cap.release()
-            # 发送提取的帧列表
             self.finished.emit(extracted_frames)
 
         except Exception as e:
