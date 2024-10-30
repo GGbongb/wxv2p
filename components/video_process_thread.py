@@ -20,7 +20,7 @@ class VideoProcessThread(QThread):
         self.fixed_top_height = 120
         self.fixed_bottom_height = 70
         self.reference_frame = None  # 存储参考帧
-        self.movement_threshold = 400  # 移动距离阈值，超过这个值就提取新的参考帧
+        self.movement_threshold = 600  # 移动距离阈值，超过这个值就提取新的参考帧
 
     def setup_logging(self):
         self.logger = logging.getLogger('VideoProcessThread')
@@ -149,7 +149,8 @@ class VideoProcessThread(QThread):
             total_frames = cap.get(cv2.CAP_PROP_FRAME_COUNT)
             prev_frame = None
             frame_count = 0
-            accumulated_movement = 0  # 累积移动距离
+            accumulated_movement = 0
+            extracted_frames = []  # 存储提取的帧
 
             while True:
                 ret, frame = cap.read()
@@ -166,11 +167,13 @@ class VideoProcessThread(QThread):
                     if vis_image is not None:
                         cv2.imwrite(f"{self.debug_output_dir}/tracking_{frame_count:04d}.jpg", vis_image)
                     
-                    # 检查是否需要更新参考帧
+                    # 检查是否需要更新参考帧和保存图片
                     if accumulated_movement >= self.movement_threshold:
                         self.reference_frame = frame.copy()
                         accumulated_movement = 0
                         self.log(f"New reference frame captured at frame {frame_count}")
+                        # 保存提取的帧
+                        extracted_frames.append(frame.copy())
 
                 prev_frame = frame.copy()
                 frame_count += 1
@@ -180,7 +183,8 @@ class VideoProcessThread(QThread):
                 self.progress.emit(progress)
 
             cap.release()
-            self.finished.emit([])
+            # 发送提取的帧列表
+            self.finished.emit(extracted_frames)
 
         except Exception as e:
             self.log(f"Error in run: {str(e)}")
