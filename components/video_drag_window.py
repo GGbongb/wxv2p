@@ -110,14 +110,14 @@ class VideoDragDropWindow(QMainWindow):
         self.thread.finished.connect(self.show_images)
         
         # 添加日志显示功能
-        self.log_display = QTextEdit(self)
-        self.log_display.setReadOnly(True)
-        self.layout.addWidget(self.log_display)
+       # self.log_display = QTextEdit(self)
+       # self.log_display.setReadOnly(True)
+       # self.layout.addWidget(self.log_display)
 
-        def display_log(message):
-            self.log_display.append(message)
+        # def display_log(message):
+        #     self.log_display.append(message)
 
-        self.thread.log_message.connect(display_log)
+        # self.thread.log_message.connect(display_log)
         
         self.thread.start()
 
