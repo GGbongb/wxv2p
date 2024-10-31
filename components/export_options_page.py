@@ -8,8 +8,8 @@ class ExportOptionsPage(QWidget):
         self.init_ui()
         
     def init_ui(self):
-        # 设置背景色
-        self.setStyleSheet("background-color: #FFF0E0;")  # 暖色调背景
+        # 设置整个窗口的背景色
+        self.setStyleSheet("background-color: #FFF5E6;")  # 更浅的暖色调背景
         
         # 创建主布局
         main_layout = QVBoxLayout(self)
@@ -21,22 +21,21 @@ class ExportOptionsPage(QWidget):
         
         # 创建返回主页按钮
         self.home_button = QPushButton()
-        self.home_button.setIcon(QIcon("resources/home.png"))  # 需要准备home图标
+        self.home_button.setIcon(QIcon("resources/home.png"))
         self.home_button.setIconSize(QSize(24, 24))
         self.home_button.setText("返回主页")
         self.home_button.setStyleSheet("""
             QPushButton {
-                background-color: transparent;
-                color: #2c3e50;
-                border: 2px solid #2c3e50;
+                background-color: #2c3e50;
+                color: white;
+                border: none;
                 border-radius: 15px;
                 padding: 8px 15px;
                 font-size: 16px;
                 font-weight: bold;
             }
             QPushButton:hover {
-                background-color: #2c3e50;
-                color: white;
+                background-color: #34495e;
             }
         """)
         self.home_button.setCursor(Qt.PointingHandCursor)
@@ -50,7 +49,6 @@ class ExportOptionsPage(QWidget):
         title_label.setAlignment(Qt.AlignCenter)
         title_label.setStyleSheet("""
             QLabel {
-                color: #2c3e50;
                 font-size: 48px;
                 font-weight: bold;
                 margin: 40px 0;
@@ -90,6 +88,7 @@ class ExportOptionsPage(QWidget):
     def create_action_button(self, text, color, description=""):
         """创建带有描述文本的功能按钮"""
         container = QWidget()
+        container.setStyleSheet("background-color: transparent;")  # 确保容器背景透明
         layout = QVBoxLayout(container)
         layout.setSpacing(10)
         
