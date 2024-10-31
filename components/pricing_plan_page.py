@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
-                           QPushButton, QFrame)
+                           QPushButton, QFrame, QLineEdit)
 from PyQt5.QtCore import Qt
 
 class PricingCard(QFrame):
@@ -122,5 +122,106 @@ class PricingPlanPage(QWidget):
         
         main_layout.addLayout(cards_layout)
         
+        # 添加分隔空间
+        main_layout.addSpacing(40)
+        
+        # 添加激活码区域
+        activation_container = QFrame()
+        activation_container.setObjectName("activationContainer")
+        activation_container.setStyleSheet("""
+            QFrame#activationContainer {
+                background-color: white;
+                border-radius: 15px;
+                padding: 20px;
+                margin: 20px 100px;
+            }
+        """)
+        
+        activation_layout = QVBoxLayout(activation_container)
+        
+        # 添加激活码标题
+        activation_title = QLabel("已有激活码？")
+        activation_title.setStyleSheet("""
+            QLabel {
+                font-size: 24px;
+                font-weight: bold;
+                color: #2c3e50;
+                margin-bottom: 10px;
+            }
+        """)
+        activation_title.setAlignment(Qt.AlignCenter)
+        activation_layout.addWidget(activation_title)
+        
+        # 创建输入区域容器
+        input_container = QHBoxLayout()
+        input_container.setSpacing(15)
+        
+        # 添加激活码输入框
+        self.activation_input = QLineEdit()
+        self.activation_input.setPlaceholderText("请输入激活码")
+        self.activation_input.setStyleSheet("""
+            QLineEdit {
+                font-size: 18px;
+                padding: 10px;
+                border: 2px solid #bdc3c7;
+                border-radius: 8px;
+                min-width: 300px;
+            }
+            QLineEdit:focus {
+                border: 2px solid #3498db;
+            }
+        """)
+        input_container.addWidget(self.activation_input)
+        
+        # 添加激活按钮
+        activate_button = QPushButton("激活")
+        activate_button.setStyleSheet("""
+            QPushButton {
+                font-size: 18px;
+                font-weight: bold;
+                color: white;
+                background-color: #3498db;
+                border: none;
+                border-radius: 8px;
+                padding: 10px 30px;
+            }
+            QPushButton:hover {
+                background-color: #2980b9;
+            }
+        """)
+        activate_button.clicked.connect(self.verify_activation_code)
+        input_container.addWidget(activate_button)
+        
+        activation_layout.addLayout(input_container)
+        
+        # 添加联系方式
+        contact_label = QLabel("获取激活码请联系：example@email.com")
+        contact_label.setStyleSheet("""
+            QLabel {
+                font-size: 16px;
+                color: #7f8c8d;
+                margin-top: 10px;
+            }
+        """)
+        contact_label.setAlignment(Qt.AlignCenter)
+        activation_layout.addWidget(contact_label)
+        
+        main_layout.addWidget(activation_container)
+        
         # 添加底部空白
         main_layout.addStretch(1)
+
+    def verify_activation_code(self):
+        """验证激活码"""
+        activation_code = self.activation_input.text().strip()
+        if not activation_code:
+            self.show_message("请输入激活码")
+            return
+            
+        # TODO: 实现激活码验证逻辑
+        print(f"正在验证激活码: {activation_code}")
+        
+    def show_message(self, message):
+        """显示消息提示"""
+        from PyQt5.QtWidgets import QMessageBox
+        QMessageBox.information(self, "提示", message)
