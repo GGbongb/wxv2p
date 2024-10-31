@@ -1,6 +1,8 @@
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
                            QPushButton, QFrame, QLineEdit)
 from PyQt5.QtCore import Qt
+from .activation_manager import ActivationManager
+from PyQt5.QtWidgets import QMessageBox
 
 class PricingCard(QFrame):
     """价格卡片组件"""
@@ -75,6 +77,7 @@ class PricingCard(QFrame):
 class PricingPlanPage(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.activation_manager = ActivationManager()
         self.init_ui()
         
     def init_ui(self):
@@ -215,13 +218,23 @@ class PricingPlanPage(QWidget):
         """验证激活码"""
         activation_code = self.activation_input.text().strip()
         if not activation_code:
-            self.show_message("请输入激活码")
+            QMessageBox.warning(self, "提示", "请输入激活码")
             return
-            
-        # TODO: 实现激活码验证逻辑
-        print(f"正在验证激活码: {activation_code}")
         
-    def show_message(self, message):
-        """显示消息提示"""
-        from PyQt5.QtWidgets import QMessageBox
-        QMessageBox.information(self, "提示", message)
+        # 验证激活码
+        success, message = self.activation_manager.activate(activation_code)
+        
+        if success:
+            QMessageBox.information(self, "成功", message)
+            # 激活成功后，返回到导出页面并继续导出操作
+            self.proceed_with_export()
+        else:
+            QMessageBox.warning(self, "错误", message)
+    
+    def proceed_with_export(self):
+        """继续导出操作"""
+        from components.export_options_page import ExportOptionsPage
+        export_page = ExportOptionsPage(self.parent())
+        self.parent().setCentralWidget(export_page)
+        # 触发PDF导出
+        export_page.generate_pdf()
