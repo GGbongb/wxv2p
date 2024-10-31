@@ -2,11 +2,14 @@ import hashlib
 import time
 import json
 import os
+import base64
 from datetime import datetime, timedelta
 
 class ActivationManager:
     def __init__(self):
         self.activation_file = "activation.json"
+        self.encrypted_codes_file = "encrypted_codes.dat"
+        self.secret_key = "your_secret_key_here"  # 与生成器使用相同的密钥
         self.activation_info = self.load_activation_info()
     
     def load_activation_info(self):
@@ -25,30 +28,46 @@ class ActivationManager:
             json.dump(info, f)
     
     def verify_code(self, code):
-        """验证激活码
-        返回: (is_valid, message, duration_days)
-        """
-        if not code or len(code) != 16:  # 假设激活码长度为16位
+        """验证激活码"""
+        if not code or len(code) != 16:
             return False, "无效的激活码格式", 0
-            
+        
         try:
-            # 解析激活码
-            # 示例: XXXX-XXXX-XXXX-XXXX
-            # 前12位是加密信息，后4位是类型标识
-            code_type = code[-4:]  # 获取类型标识
+            # 读取加密的激活码数据
+            if not os.path.exists(self.encrypted_codes_file):
+                return False, "激活码验证失败", 0
             
-            # 根据类型返回不同的有效期
-            if code_type == "0030":  # 月付
-                return True, "激活成功：月付版本", 30
-            elif code_type == "0180":  # 半年付
-                return True, "激活成功：半年版本", 180
-            elif code_type == "9999":  # 永久版
-                return True, "激活成功：永久版本", 36500  # 约100年
-            else:
-                return False, "无效的激活码", 0
-                
+            with open(self.encrypted_codes_file, 'rb') as f:
+                encrypted_data = f.read()
+                decrypted_data = self.decrypt_data(encrypted_data)
+                valid_codes = json.loads(decrypted_data)
+            
+            # 查找匹配的激活码
+            for code_info in valid_codes:
+                if code_info["code"] == code:
+                    # 根据类型返回不同的有效期
+                    duration_days = {
+                        1: 30,    # 月付
+                        2: 180,   # 半年付
+                        3: 36500  # 永久版
+                    }.get(code_info["type"], 0)
+                    
+                    return True, "激活成功", duration_days
+            
+            return False, "无效的激活码", 0
+            
         except Exception as e:
             return False, f"激活码验证失败: {str(e)}", 0
+    
+    def decrypt_data(self, encrypted_data):
+        """解密数据"""
+        key = hashlib.sha256(self.secret_key.encode()).digest()
+        encrypted = base64.b64decode(encrypted_data).decode()
+        decrypted = []
+        for i, c in enumerate(encrypted):
+            key_c = key[i % len(key)]
+            decrypted.append(chr((256 + ord(c) - key_c) % 256))
+        return ''.join(decrypted)
     
     def activate(self, code):
         """激活软件"""

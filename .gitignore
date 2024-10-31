@@ -2,3 +2,4 @@ debug_output/
 repeat_regions/
 __pycache__/
 components/__pycache__/video_process_thread.cpython-311.pyc
+tools/
