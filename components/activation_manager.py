@@ -5,9 +5,13 @@ import os
 import base64
 from datetime import datetime, timedelta
 import sys
+import logging
+
+logger = logging.getLogger(__name__)
 
 class ActivationManager:
     def __init__(self):
+        logger.debug("初始化 ActivationManager")
         # 获取程序根目录
         self.root_dir = self.get_root_dir()
         # 数据文件目录
@@ -31,6 +35,16 @@ class ActivationManager:
             # 开发环境
             return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     
+    def load_activation_info(self):
+        """加载激活信息"""
+        if os.path.exists(self.activation_file):
+            try:
+                with open(self.activation_file, 'r') as f:
+                    return json.load(f)
+            except:
+                return None
+        return None
+    
     def save_activation_info(self, info):
         """保存激活信息"""
         with open(self.activation_file, 'w') as f:
@@ -38,23 +52,34 @@ class ActivationManager:
     
     def verify_code(self, code):
         """验证激活码"""
-        if not code or len(code) != 16:
-            return False, "无效的激活码格式", 0
+        logger.debug(f"开始验证激活码: {code}")
         
+        if not code or len(code) != 9:  # 修改这里，因为我们生成的是5+4=9位
+            logger.warning(f"无效的激活码格式，长度为: {len(code) if code else 0}")
+            return False, "无效的激活码格式", 0
+            
         try:
             # 读取加密的激活码数据
             if not os.path.exists(self.encrypted_codes_file):
+                logger.error(f"找不到加密文件: {self.encrypted_codes_file}")
                 return False, "激活码验证失败", 0
             
+            logger.debug("开始读取加密文件")
             with open(self.encrypted_codes_file, 'rb') as f:
                 encrypted_data = f.read()
+                logger.debug("成功读取加密数据")
+                
                 decrypted_data = self.decrypt_data(encrypted_data)
+                logger.debug("成功解密数据")
+                
                 valid_codes = json.loads(decrypted_data)
+                logger.debug(f"解析到的有效激活码数量: {len(valid_codes)}")
             
             # 查找匹配的激活码
             for code_info in valid_codes:
+                logger.debug(f"检查激活码: {code_info['code']}")
                 if code_info["code"] == code:
-                    # 根据类型返回不同的有效期
+                    logger.debug("找到匹配的激活码")
                     duration_days = {
                         1: 30,    # 月付
                         2: 180,   # 半年付
@@ -63,9 +88,11 @@ class ActivationManager:
                     
                     return True, "激活成功", duration_days
             
+            logger.warning("未找到匹配的激活码")
             return False, "无效的激活码", 0
             
         except Exception as e:
+            logger.error(f"验证过程中发生错误: {str(e)}", exc_info=True)
             return False, f"激活码验证失败: {str(e)}", 0
     
     def decrypt_data(self, encrypted_data):
@@ -80,9 +107,11 @@ class ActivationManager:
     
     def activate(self, code):
         """激活软件"""
+        logger.debug(f"尝试激活软件���激活码: {code}")
         is_valid, message, duration_days = self.verify_code(code)
         
         if not is_valid:
+            logger.warning(f"激活失败: {message}")
             return False, message
             
         # 创建激活信息
@@ -96,6 +125,7 @@ class ActivationManager:
         # 保存激活信息
         self.activation_info = activation_info
         self.save_activation_info(activation_info)
+        logger.debug("激活信息已��存")
         
         return True, message
     

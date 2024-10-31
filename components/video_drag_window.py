@@ -2,11 +2,14 @@ from PyQt5.QtWidgets import (QMainWindow, QLabel, QVBoxLayout, QWidget,
                              QPushButton, QMessageBox, QSizePolicy, QTextEdit)
 from PyQt5.QtCore import Qt, QPropertyAnimation, QEasingCurve
 from PyQt5.QtGui import QDragEnterEvent, QDropEvent
+import logging
 
 from .fun_progress_bar import FunProgressBar
 from .video_process_thread import VideoProcessThread
 from .image_viewer import ImageViewer
 from components.video_process_thread import VideoProcessThread
+
+logger = logging.getLogger(__name__)
 
 class VideoDragDropWindow(QMainWindow):
     def __init__(self):
@@ -136,4 +139,24 @@ class VideoDragDropWindow(QMainWindow):
 
     def show_images(self, frames):
         self.image_viewer = ImageViewer(frames)
+        # 连接信号到处理函数
+        self.image_viewer.switch_to_export_page.connect(self.switch_to_export_page)
         self.setCentralWidget(self.image_viewer)
+
+    def switch_to_export_page(self):
+        """处理切换到导出页面的信号"""
+        logger.debug("开始切换到导出页面")
+        try:
+            from components.export_options_page import ExportOptionsPage
+            export_page = ExportOptionsPage(self)
+            logger.debug("创建 ExportOptionsPage 成功")
+            
+            self.setCentralWidget(export_page)
+            logger.debug("设置 centralWidget 成功")
+            
+            # 确保窗口保持显示
+            self.show()
+            logger.debug("调用 show() 方法")
+            
+        except Exception as e:
+            logger.error(f"切换页面时发生错误: {str(e)}", exc_info=True)

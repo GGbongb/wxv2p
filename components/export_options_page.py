@@ -6,11 +6,21 @@ from datetime import datetime
 from .pdf_generator import PDFGenerator
 from .activation_manager import ActivationManager
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 class ExportOptionsPage(QWidget):
     def __init__(self, parent=None):
+        logger.debug(f"初始化 ExportOptionsPage, parent: {parent}")
         super().__init__(parent)
         self.activation_manager = ActivationManager()
         self.init_ui()
+        logger.debug("ExportOptionsPage 初始化完成")
+        # 确保窗口尺寸正确
+        if parent:
+            self.setFixedSize(parent.size())
+            logger.debug(f"设置窗口尺寸: {parent.size()}")
         
     def init_ui(self):
         # 设置整个窗口的背景色

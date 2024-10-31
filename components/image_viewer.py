@@ -1,13 +1,21 @@
 from PyQt5.QtWidgets import (QWidget, QLabel, QVBoxLayout, QPushButton, 
                              QHBoxLayout, QFrame)
-from PyQt5.QtCore import Qt, QSize, QTimer
-from PyQt5.QtGui import QPixmap, QImage, QIcon,QColor 
+from PyQt5.QtCore import Qt, QSize, QTimer, pyqtSignal
+from PyQt5.QtGui import QPixmap, QImage, QIcon, QColor
+import logging
+
+# 配置日志
+logging.basicConfig(level=logging.DEBUG, 
+                   format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 class ImageViewer(QWidget):
     processed_images = []
+    switch_to_export_page = pyqtSignal()
     
     def __init__(self, frames):
         super().__init__()
+        logger.debug("初始化 ImageViewer")
         self.images = [QImage(frame.data, frame.shape[1], frame.shape[0], QImage.Format_RGB888).rgbSwapped() for frame in frames]
         ImageViewer.processed_images = self.images  # 初始化存储
         self.current_index = 0
@@ -170,10 +178,13 @@ class ImageViewer(QWidget):
             self.update_image_count_label()
             
     def go_to_next_step(self):
-        from components.export_options_page import ExportOptionsPage
-        # 传递 parent 参数
-        export_page = ExportOptionsPage(self.parent())
-        self.parent().setCentralWidget(export_page)
+        logger.debug("点击下一步按钮")
+        try:
+            # 发出切换页面的信号
+            self.switch_to_export_page.emit()
+            logger.debug("发出切换页面信号")
+        except Exception as e:
+            logger.error(f"切换页面时发生错误: {str(e)}", exc_info=True)
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Space or event.key() == Qt.Key_Delete:
