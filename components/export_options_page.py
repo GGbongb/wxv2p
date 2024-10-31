@@ -3,6 +3,7 @@ from PyQt5.QtCore import Qt, QSize
 from PyQt5.QtGui import QIcon
 import os
 from datetime import datetime
+from .pdf_generator import PDFGenerator
 
 class ExportOptionsPage(QWidget):
     def __init__(self, parent=None):
@@ -197,5 +198,40 @@ class ExportOptionsPage(QWidget):
             )
 
     def export_pdf(self):
-        # PDF导出功能待实现
-        QMessageBox.information(self, "提示", "PDF导出功能正在开发中...")
+        """将图片整理为PDF文档,每页3张图片横向排列"""
+        from components.image_viewer import ImageViewer
+        
+        if not ImageViewer.processed_images:
+            QMessageBox.warning(self, "警告", "没有可导出的图片！")
+            return
+            
+        # 获取保存路径
+        file_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "保存PDF文件",
+            os.path.expanduser("~/Desktop/微信聊天记录.pdf"),
+            "PDF文件 (*.pdf)"
+        )
+        
+        if not file_path:  # 用户取消选择
+            return
+            
+        # 创建PDF生成器并生成PDF
+        pdf_generator = PDFGenerator()
+        success, error_message = pdf_generator.generate_pdf(
+            ImageViewer.processed_images,
+            file_path
+        )
+        
+        if success:
+            QMessageBox.information(
+                self,
+                "导出成功",
+                f"PDF文件已成功保存到:\n{file_path}"
+            )
+        else:
+            QMessageBox.critical(
+                self,
+                "导出失败",
+                f"PDF生成过程中发生错误：\n{error_message}"
+            )
