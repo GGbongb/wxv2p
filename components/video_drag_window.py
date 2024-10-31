@@ -28,7 +28,7 @@ class VideoDragDropWindow(QMainWindow):
         self.drop_area.setStyleSheet("""
             QLabel {
                 color: #2c3e50;
-                font-size: 36px;
+                font-size: 72px;
                 font-weight: bold;
             }
         """)
@@ -41,7 +41,7 @@ class VideoDragDropWindow(QMainWindow):
                 background-color: #f1c40f;
                 color: white;
                 border: none;
-                padding: 15px 30px;
+                padding: 30px 60px;
                 border-radius: 8px;
                 font-size: 24px;
                 font-weight: bold;
@@ -52,6 +52,7 @@ class VideoDragDropWindow(QMainWindow):
         """)
         self.process_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.process_button.clicked.connect(self.process_video)
+        self.process_button.hide()  # 初始时隐藏按钮
         self.layout.addWidget(self.process_button, alignment=Qt.AlignCenter)
 
         self.setAcceptDrops(True)
@@ -67,6 +68,7 @@ class VideoDragDropWindow(QMainWindow):
         if urls:
             self.video_path = urls[0].toLocalFile()
             self.drop_area.setText("文件已加载，点击开始截图")
+            self.process_button.show()  # 显示开始按钮
 
     def process_video(self):
         if not self.video_path:
