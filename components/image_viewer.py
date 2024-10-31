@@ -171,7 +171,8 @@ class ImageViewer(QWidget):
             
     def go_to_next_step(self):
         from components.export_options_page import ExportOptionsPage
-        export_page = ExportOptionsPage()
+        # 传递 parent 参数
+        export_page = ExportOptionsPage(self.parent())
         self.parent().setCentralWidget(export_page)
 
     def keyPressEvent(self, event):

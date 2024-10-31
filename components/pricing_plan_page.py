@@ -226,8 +226,12 @@ class PricingPlanPage(QWidget):
         
         if success:
             QMessageBox.information(self, "成功", message)
-            # 激活成功后，返回到导出页面并继续导出操作
-            self.proceed_with_export()
+            # 返回导出页面
+            from components.export_options_page import ExportOptionsPage
+            export_page = ExportOptionsPage(self.parent())
+            self.parent().setCentralWidget(export_page)
+            # 自动开始导出
+            export_page.generate_pdf()
         else:
             QMessageBox.warning(self, "错误", message)
     

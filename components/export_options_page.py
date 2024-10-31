@@ -4,10 +4,12 @@ from PyQt5.QtGui import QIcon
 import os
 from datetime import datetime
 from .pdf_generator import PDFGenerator
+from .activation_manager import ActivationManager
 
 class ExportOptionsPage(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.activation_manager = ActivationManager()
         self.init_ui()
         
     def init_ui(self):
@@ -91,6 +93,11 @@ class ExportOptionsPage(QWidget):
         # 连接按钮信号到槽函数
         self.export_images_button.findChild(QPushButton).clicked.connect(self.export_images)
         self.export_pdf_button.findChild(QPushButton).clicked.connect(self.export_pdf)
+        
+        # 添加激活状态显示
+        self.status_label = QLabel()
+        self.update_status_label()
+        main_layout.addWidget(self.status_label, alignment=Qt.AlignRight)
         
     def create_action_button(self, text, color, description=""):
         """创建带有描述文本的功能按钮"""
@@ -199,8 +206,44 @@ class ExportOptionsPage(QWidget):
 
     def export_pdf(self):
         """处理PDF导出按钮点击"""
-        from components.pricing_plan_page import PricingPlanPage
+        # 检查激活状态
+        if not self.activation_manager.is_activated():
+            from components.pricing_plan_page import PricingPlanPage
+            pricing_page = PricingPlanPage(self)
+            self.parent().setCentralWidget(pricing_page)
+            return
+            
+        # 已激活，继续导出流程
+        self.generate_pdf()
+    
+    def update_status_label(self):
+        """更新激活状态显示"""
+        if self.activation_manager.is_activated():
+            remaining_days = self.activation_manager.get_remaining_days()
+            if remaining_days > 3650:  # 超过10年视为永久版
+                status_text = "永久版"
+            else:
+                status_text = f"剩余使用时间：{remaining_days}天"
+            
+            self.status_label.setStyleSheet("""
+                QLabel {
+                    color: #27ae60;
+                    font-size: 16px;
+                    padding: 5px 10px;
+                    background-color: #e8f5e9;
+                    border-radius: 4px;
+                }
+            """)
+        else:
+            status_text = "未激活"
+            self.status_label.setStyleSheet("""
+                QLabel {
+                    color: #c0392b;
+                    font-size: 16px;
+                    padding: 5px 10px;
+                    background-color: #ffebee;
+                    border-radius: 4px;
+                }
+            """)
         
-        # 显示价格方案页面
-        pricing_page = PricingPlanPage(self)
-        self.parent().setCentralWidget(pricing_page)
+        self.status_label.setText(status_text)

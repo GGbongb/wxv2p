@@ -4,23 +4,32 @@ import json
 import os
 import base64
 from datetime import datetime, timedelta
+import sys
 
 class ActivationManager:
     def __init__(self):
-        self.activation_file = "activation.json"
-        self.encrypted_codes_file = "encrypted_codes.dat"
-        self.secret_key = "your_secret_key_here"  # 与生成器使用相同的密钥
+        # 获取程序根目录
+        self.root_dir = self.get_root_dir()
+        # 数据文件目录
+        self.data_dir = os.path.join(self.root_dir, "data")
+        # 确保数据目录存在
+        os.makedirs(self.data_dir, exist_ok=True)
+        
+        # 文件路径
+        self.activation_file = os.path.join(self.data_dir, "activation.json")
+        self.encrypted_codes_file = os.path.join(self.data_dir, "encrypted_codes.dat")
+        self.secret_key = "your_secret_key_here"
+        
         self.activation_info = self.load_activation_info()
     
-    def load_activation_info(self):
-        """加载激活信息"""
-        if os.path.exists(self.activation_file):
-            try:
-                with open(self.activation_file, 'r') as f:
-                    return json.load(f)
-            except:
-                return None
-        return None
+    def get_root_dir(self):
+        """获取程序根目录"""
+        if getattr(sys, 'frozen', False):
+            # 打包后的程序
+            return os.path.dirname(sys.executable)
+        else:
+            # 开发环境
+            return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     
     def save_activation_info(self, info):
         """保存激活信息"""
