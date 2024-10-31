@@ -23,6 +23,14 @@ class VideoDragDropWindow(QMainWindow):
         self.video_path = None
 
     def init_drag_drop_ui(self):
+        # 创建一个容器用于文字显示
+        self.text_container = QWidget()
+        text_layout = QVBoxLayout(self.text_container)
+        
+        # 添加上方空白
+        text_layout.addStretch(4)
+        
+        # 拖放文字标签
         self.drop_area = QLabel("拖曳微信录屏文件到此", self)
         self.drop_area.setAlignment(Qt.AlignCenter)
         self.drop_area.setStyleSheet("""
@@ -32,9 +40,12 @@ class VideoDragDropWindow(QMainWindow):
                 font-weight: bold;
             }
         """)
-        self.drop_area.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.layout.addWidget(self.drop_area)
-
+        text_layout.addWidget(self.drop_area)
+        
+        # 添加文字和按钮之间的空白
+        text_layout.addStretch(3)
+        
+        # 开始按钮
         self.process_button = QPushButton("开始截图", self)
         self.process_button.setStyleSheet("""
             QPushButton {
@@ -53,8 +64,14 @@ class VideoDragDropWindow(QMainWindow):
         self.process_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.process_button.clicked.connect(self.process_video)
         self.process_button.hide()  # 初始时隐藏按钮
-        self.layout.addWidget(self.process_button, alignment=Qt.AlignCenter)
-
+        text_layout.addWidget(self.process_button, alignment=Qt.AlignCenter)
+        
+        # 添加底部空白
+        text_layout.addStretch(4)
+        
+        # 将容器添加到主布局
+        self.layout.addWidget(self.text_container)
+        
         self.setAcceptDrops(True)
 
     def dragEnterEvent(self, event: QDragEnterEvent):
