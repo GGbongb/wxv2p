@@ -166,7 +166,9 @@ class ImageViewer(QWidget):
             self.update_image_count_label()
             
     def go_to_next_step(self):
-        print("进入下一步")
+        from components.export_options_page import ExportOptionsPage
+        export_page = ExportOptionsPage()
+        self.parent().setCentralWidget(export_page)
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Space or event.key() == Qt.Key_Delete:

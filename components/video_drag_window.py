@@ -137,4 +137,3 @@ class VideoDragDropWindow(QMainWindow):
     def show_images(self, frames):
         self.image_viewer = ImageViewer(frames)
         self.setCentralWidget(self.image_viewer)
-        
