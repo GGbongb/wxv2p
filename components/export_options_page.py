@@ -216,16 +216,59 @@ class ExportOptionsPage(QWidget):
 
     def export_pdf(self):
         """处理PDF导出按钮点击"""
+        logger.debug("开始处理PDF导出")
         # 检查激活状态
         if not self.activation_manager.is_activated():
+            logger.debug("未激活，跳转到激活页面")
             from components.pricing_plan_page import PricingPlanPage
-            pricing_page = PricingPlanPage(self)
+            pricing_page = PricingPlanPage(self.parent())
             self.parent().setCentralWidget(pricing_page)
             return
             
         # 已激活，继续导出流程
-        self.generate_pdf()
-    
+        logger.debug("已激活，开始生成PDF")
+        try:
+            self.generate_pdf()
+        except Exception as e:
+            logger.error(f"生成PDF时发生错误: {str(e)}", exc_info=True)
+
+    def generate_pdf(self):
+        """生成PDF文件"""
+        logger.debug("开始生成PDF文件")
+        try:
+            # 获取保存路径
+            file_path, _ = QFileDialog.getSaveFileName(
+                self,
+                "保存PDF文件",
+                os.path.expanduser("~/Desktop/聊天记录.pdf"),
+                "PDF文件 (*.pdf)"
+            )
+            
+            if not file_path:
+                logger.debug("用户取消了保存操作")
+                return
+                
+            # 生成PDF
+            from components.image_viewer import ImageViewer
+            if not ImageViewer.processed_images:
+                QMessageBox.warning(self, "警告", "没有可导出的图片！")
+                return
+                
+            logger.debug(f"开始生成PDF，保存路径: {file_path}")
+            pdf_generator = PDFGenerator()
+            success, error = pdf_generator.generate_pdf(ImageViewer.processed_images, file_path)
+            
+            if success:
+                QMessageBox.information(self, "成功", "PDF文件生成成功！")
+                logger.debug("PDF生成成功")
+            else:
+                QMessageBox.critical(self, "错误", f"生成PDF时发生错误：\n{error}")
+                logger.error(f"PDF生成失败: {error}")
+                
+        except Exception as e:
+            logger.error(f"生成PDF过程中发生错误: {str(e)}", exc_info=True)
+            QMessageBox.critical(self, "错误", f"生成PDF时发生错误：\n{str(e)}")
+
     def update_status_label(self):
         """更新激活状态显示"""
         if self.activation_manager.is_activated():

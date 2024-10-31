@@ -3,6 +3,9 @@ from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
 from PyQt5.QtCore import Qt
 from .activation_manager import ActivationManager
 from PyQt5.QtWidgets import QMessageBox
+import logging
+
+logger = logging.getLogger(__name__)
 
 class PricingCard(QFrame):
     """价格卡片组件"""
@@ -216,6 +219,7 @@ class PricingPlanPage(QWidget):
 
     def verify_activation_code(self):
         """验证激活码"""
+        logger.debug("开始验证激活码")
         activation_code = self.activation_input.text().strip()
         if not activation_code:
             QMessageBox.warning(self, "提示", "请输入激活码")
@@ -225,13 +229,19 @@ class PricingPlanPage(QWidget):
         success, message = self.activation_manager.activate(activation_code)
         
         if success:
+            logger.debug("激活成功，准备返回导出页面")
             QMessageBox.information(self, "成功", message)
-            # 返回导出页面
-            from components.export_options_page import ExportOptionsPage
-            export_page = ExportOptionsPage(self.parent())
-            self.parent().setCentralWidget(export_page)
-            # 自动开始导出
-            export_page.generate_pdf()
+            
+            try:
+                # 返回导出页面
+                from components.export_options_page import ExportOptionsPage
+                export_page = ExportOptionsPage(self.parent())
+                self.parent().setCentralWidget(export_page)
+                # 自动开始导出
+                export_page.generate_pdf()
+                logger.debug("成功返回导出页面并开始生成PDF")
+            except Exception as e:
+                logger.error(f"返回导出页面时发生错误: {str(e)}", exc_info=True)
         else:
             QMessageBox.warning(self, "错误", message)
     
