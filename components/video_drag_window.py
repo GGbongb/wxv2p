@@ -84,6 +84,14 @@ class VideoDragDropWindow(QMainWindow):
         urls = event.mimeData().urls()
         if urls:
             self.video_path = urls[0].toLocalFile()
+            # 保持文字样式和位置不变，只更改内容
+            self.drop_area.setStyleSheet("""
+                QLabel {
+                    color: #2c3e50;
+                    font-size: 72px;
+                    font-weight: bold;
+                }
+            """)
             self.drop_area.setText("文件已加载，点击开始截图")
             self.process_button.show()  # 显示开始按钮
 
@@ -129,3 +137,4 @@ class VideoDragDropWindow(QMainWindow):
     def show_images(self, frames):
         self.image_viewer = ImageViewer(frames)
         self.setCentralWidget(self.image_viewer)
+        
