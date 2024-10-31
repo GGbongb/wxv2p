@@ -1,6 +1,8 @@
-from PyQt5.QtWidgets import (QWidget, QPushButton, QVBoxLayout, QHBoxLayout, QLabel)
+from PyQt5.QtWidgets import (QWidget, QPushButton, QVBoxLayout, QHBoxLayout, QLabel, QFileDialog, QMessageBox)
 from PyQt5.QtCore import Qt, QSize
 from PyQt5.QtGui import QIcon
+import os
+from datetime import datetime
 
 class ExportOptionsPage(QWidget):
     def __init__(self, parent=None):
@@ -85,13 +87,30 @@ class ExportOptionsPage(QWidget):
         # 添加底部空白
         main_layout.addStretch(1)
         
+        # 连接按钮信号到槽函数
+        self.export_images_button.findChild(QPushButton).clicked.connect(self.export_images)
+        self.export_pdf_button.findChild(QPushButton).clicked.connect(self.export_pdf)
+        
     def create_action_button(self, text, color, description=""):
         """创建带有描述文本的功能按钮"""
         container = QWidget()
-        container.setStyleSheet("background-color: transparent;")  # 确保容器背景透明
+        container.setStyleSheet("background-color: transparent;")
         layout = QVBoxLayout(container)
         layout.setSpacing(10)
         
+        # 如果有描述文本，先添加描述
+        if description:
+            desc_label = QLabel(description)
+            desc_label.setAlignment(Qt.AlignCenter)
+            desc_label.setStyleSheet("""
+                QLabel {
+                    color: #7f8c8d;
+                    font-size: 16px;
+                }
+            """)
+            layout.addWidget(desc_label)
+        
+        # 创建按钮
         button = QPushButton(text)
         button.setStyleSheet(f"""
             QPushButton {{
@@ -111,18 +130,6 @@ class ExportOptionsPage(QWidget):
         button.setCursor(Qt.PointingHandCursor)
         button.setFixedSize(450, 100)
         
-        # 添加描述文本
-        if description:
-            desc_label = QLabel(description)
-            desc_label.setAlignment(Qt.AlignCenter)
-            desc_label.setStyleSheet("""
-                QLabel {
-                    color: #7f8c8d;
-                    font-size: 16px;
-                }
-            """)
-            layout.addWidget(desc_label)
-        
         layout.addWidget(button)
         return container
 
@@ -138,3 +145,57 @@ class ExportOptionsPage(QWidget):
         from components.video_drag_window import VideoDragDropWindow
         main_window = VideoDragDropWindow()
         self.parent().setCentralWidget(main_window)
+
+    def export_images(self):
+        """导出所有图片到选择的文件夹"""
+        print("导出图片方法被调用")  # 添加这行用于测试
+        from components.image_viewer import ImageViewer
+        
+        if not ImageViewer.processed_images:
+            QMessageBox.warning(self, "警告", "没有可导出的图片！")
+            return
+            
+        # 获取用户选择的保存目录
+        folder_path = QFileDialog.getExistingDirectory(
+            self,
+            "选择保存目录",
+            os.path.expanduser("~/Desktop"),  # 默认打开桌面
+            QFileDialog.ShowDirsOnly
+        )
+        
+        if not folder_path:  # 用户取消选择
+            return
+            
+        try:
+            # 创建以当前时间命名的子文件夹
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            export_folder = os.path.join(folder_path, f"微信聊天记录_{timestamp}")
+            os.makedirs(export_folder, exist_ok=True)
+            
+            # 导出所有图片
+            total = len(ImageViewer.processed_images)
+            for i, image in enumerate(ImageViewer.processed_images):
+                # 生成文件名
+                filename = f"聊天记录_{i+1:03d}.png"
+                filepath = os.path.join(export_folder, filename)
+                
+                # 保存图片
+                image.save(filepath, "PNG")
+            
+            # 显示成功消息
+            QMessageBox.information(
+                self,
+                "导出成功",
+                f"已成功导出 {total} 张图片到:\n{export_folder}"
+            )
+            
+        except Exception as e:
+            QMessageBox.critical(
+                self,
+                "导出失败",
+                f"导出过程中发生错误：\n{str(e)}"
+            )
+
+    def export_pdf(self):
+        # PDF导出功能待实现
+        QMessageBox.information(self, "提示", "PDF导出功能正在开发中...")

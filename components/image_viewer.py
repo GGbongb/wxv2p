@@ -4,9 +4,12 @@ from PyQt5.QtCore import Qt, QSize, QTimer
 from PyQt5.QtGui import QPixmap, QImage, QIcon,QColor 
 
 class ImageViewer(QWidget):
+    processed_images = []
+    
     def __init__(self, frames):
         super().__init__()
         self.images = [QImage(frame.data, frame.shape[1], frame.shape[0], QImage.Format_RGB888).rgbSwapped() for frame in frames]
+        ImageViewer.processed_images = self.images  # 初始化存储
         self.current_index = 0
         self.selected_image = 0  # 0 表示左侧图片被选中，1 表示右侧图片被选中
         self.initUI()
@@ -158,6 +161,7 @@ class ImageViewer(QWidget):
     def delete_current(self):
         if self.images:
             del self.images[self.current_index + self.selected_image]
+            ImageViewer.processed_images = self.images  # 更新存储的图片
             if self.current_index + self.selected_image >= len(self.images):
                 self.current_index = max(0, len(self.images) - 2)
                 self.selected_image = 0
