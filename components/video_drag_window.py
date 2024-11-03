@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import (QMainWindow, QLabel, QVBoxLayout, QWidget,
-                             QPushButton, QMessageBox, QSizePolicy, QTextEdit)
+                             QPushButton, QMessageBox, QSizePolicy, QTextEdit, QHBoxLayout, QFrame)
 from PyQt5.QtCore import Qt, QPropertyAnimation, QEasingCurve
 from PyQt5.QtGui import QDragEnterEvent, QDropEvent
 import logging
@@ -21,9 +21,87 @@ class VideoDragDropWindow(QMainWindow):
         self.setCentralWidget(self.central_widget)
         self.layout = QVBoxLayout(self.central_widget)
 
+        # 添加顶部状态栏
+        self.init_status_bar()
+        
         self.init_drag_drop_ui()
 
         self.video_path = None
+
+    def init_status_bar(self):
+        """初始化顶部状态栏"""
+        status_layout = QHBoxLayout()
+        
+        # 版本信息
+        version_label = QLabel("v1.0.0")
+        version_label.setStyleSheet("""
+            QLabel {
+                color: #7f8c8d;
+                font-size: 14px;
+                padding: 5px;
+            }
+        """)
+        
+        # 添加弹性空间
+        status_layout.addWidget(version_label)
+        status_layout.addStretch()
+        
+        # 激活状态
+        self.activation_status = QLabel()
+        self.activation_status.setStyleSheet("""
+            QLabel {
+                font-size: 14px;
+                padding: 5px 10px;
+                border-radius: 4px;
+            }
+        """)
+        self.update_activation_status()
+        
+        status_layout.addWidget(self.activation_status)
+        
+        # 将状态栏添加到主布局
+        self.layout.addLayout(status_layout)
+        
+        # 添加分隔线
+        separator = QFrame()
+        separator.setFrameShape(QFrame.HLine)
+        separator.setStyleSheet("background-color: #bdc3c7;")
+        self.layout.addWidget(separator)
+
+    def update_activation_status(self):
+        """更新激活状态显示"""
+        from components.activation_manager import ActivationManager
+        activation_manager = ActivationManager()
+        
+        if activation_manager.is_activated():
+            remaining_days = activation_manager.get_remaining_days()
+            if remaining_days > 3650:  # 超过10年视为永久版
+                status_text = "永久版"
+            else:
+                status_text = f"剩余使用时间：{remaining_days}天"
+            
+            self.activation_status.setStyleSheet("""
+                QLabel {
+                    color: #27ae60;
+                    font-size: 14px;
+                    padding: 5px 10px;
+                    background-color: #e8f5e9;
+                    border-radius: 4px;
+                }
+            """)
+        else:
+            status_text = "未激活"
+            self.activation_status.setStyleSheet("""
+                QLabel {
+                    color: #c0392b;
+                    font-size: 14px;
+                    padding: 5px 10px;
+                    background-color: #ffebee;
+                    border-radius: 4px;
+                }
+            """)
+        
+        self.activation_status.setText(status_text)
 
     def init_drag_drop_ui(self):
         # 创建一个容器用于文字显示
@@ -153,6 +231,10 @@ class VideoDragDropWindow(QMainWindow):
             
             self.setCentralWidget(export_page)
             logger.debug("设置 centralWidget 成功")
+            
+            # 更新激活状态
+            self.update_activation_status()
+            logger.debug("更新激活状态显示")
             
             # 确保窗口保持显示
             self.show()
