@@ -3,7 +3,8 @@ import numpy as np
 from PyQt5.QtCore import QThread, pyqtSignal
 import logging
 import os
-
+import logging
+logger = logging.getLogger(__name__)
 class VideoProcessThread(QThread):
     progress = pyqtSignal(int)
     finished = pyqtSignal(list)
@@ -139,6 +140,9 @@ class VideoProcessThread(QThread):
 
     def run(self):
         try:
+            logger.debug(f"处理视频: {self.video_path}")
+            # 这里是处理视频的逻辑
+            # 例如，读取视频帧并发送进度信号
             cap = cv2.VideoCapture(self.video_path)
             if not cap.isOpened():
                 raise Exception("Error opening video file")
@@ -194,6 +198,7 @@ class VideoProcessThread(QThread):
 
             cap.release()
             self.finished.emit(extracted_frames)
+            logger.debug("视频处理完成")
 
         except Exception as e:
             self.log(f"Error in run: {str(e)}")

@@ -83,7 +83,7 @@ class VideoDragDropWindow(QMainWindow):
             self.activation_status.setStyleSheet("""
                 QLabel {
                     color: #27ae60;
-                    font-size: 14px;
+                    font-size: 22px;
                     padding: 5px 10px;
                     background-color: #e8f5e9;
                     border-radius: 4px;
@@ -94,7 +94,7 @@ class VideoDragDropWindow(QMainWindow):
             self.activation_status.setStyleSheet("""
                 QLabel {
                     color: #c0392b;
-                    font-size: 14px;
+                    font-size: 22px;
                     padding: 5px 10px;
                     background-color: #ffebee;
                     border-radius: 4px;
@@ -180,13 +180,32 @@ class VideoDragDropWindow(QMainWindow):
         if not self.video_path:
             QMessageBox.warning(self, "警告", "请先拖入视频文件！")
             return
+        
+        logger.debug(f"开始处理视频: {self.video_path}")
 
+        # 隐藏激活状态标签
+        self.activation_status.hide()  # 添加这一行
         # Clear the layout
         for i in reversed(range(self.layout.count())): 
-            self.layout.itemAt(i).widget().setParent(None)
-
+            widget = self.layout.itemAt(i).widget()
+            if widget:
+                logger.debug(f"移除控件: {widget}")
+                widget.setParent(None)
+            else:
+                logger.debug("没有找到控件")   
+        self.layout.update()
+                  
+        logger.debug(f"准备展示进度条")
+        
+    # 创建一个新的布局来居中进度条
+        progress_layout = QVBoxLayout()
+        progress_layout.addStretch(1)  # 添加弹性空间以居中
         self.progress_bar = FunProgressBar(self)
-        self.layout.addWidget(self.progress_bar)
+        progress_layout.addWidget(self.progress_bar)
+        progress_layout.addStretch(1)  # 添加弹性空间以居中
+
+        # 将进度条布局添加到主布局
+        self.layout.addLayout(progress_layout)
 
         self.animation = QPropertyAnimation(self.progress_bar, b"value")
         self.animation.setDuration(1000)
@@ -198,17 +217,18 @@ class VideoDragDropWindow(QMainWindow):
         self.thread.progress.connect(self.update_progress)
         self.thread.finished.connect(self.show_images)
         
-        # 添加日志显示功能
-       # self.log_display = QTextEdit(self)
-       # self.log_display.setReadOnly(True)
-       # self.layout.addWidget(self.log_display)
+        #添加日志显示功能
+        #self.log_display = QTextEdit(self)
+        #self.log_display.setReadOnly(True)
+        #self.layout.addWidget(self.log_display)
 
-        # def display_log(message):
+        #def display_log(message):
         #     self.log_display.append(message)
 
-        # self.thread.log_message.connect(display_log)
-        
+        #self.thread.log_message.connect(display_log)
+        logger.debug("启动视频处理线程")    
         self.thread.start()
+        logger.debug("视频处理线程已启动")
 
     def update_progress(self, value):
         self.animation.setStartValue(self.progress_bar.value())
