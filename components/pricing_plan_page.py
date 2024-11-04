@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
+from PyQt5.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, 
                               QPushButton, QFrame, QLineEdit)
 from PyQt5.QtCore import Qt
 from .activation_manager import ActivationManager
@@ -9,7 +9,7 @@ import os
 
 logger = logging.getLogger(__name__)
 
-class PricingPlanPage(QWidget):
+class PricingPlanPage(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.activation_manager = ActivationManager()

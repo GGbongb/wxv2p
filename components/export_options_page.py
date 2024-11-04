@@ -5,7 +5,7 @@ import os
 from datetime import datetime
 from .pdf_generator import PDFGenerator
 from .activation_manager import ActivationManager
-
+from .pricing_plan_page import PricingPlanPage
 import logging
 
 logger = logging.getLogger(__name__)
@@ -214,15 +214,15 @@ class ExportOptionsPage(QWidget):
                 f"导出过程中发生错误：\n{str(e)}"
             )
 
+    # 在 ExportOptionsPage 类中，找到 export_pdf 方法并修改如下：
     def export_pdf(self):
         """处理PDF导出按钮点击"""
         logger.debug("开始处理PDF导出")
         # 检查激活状态
         if not self.activation_manager.is_activated():
-            logger.debug("未激活，跳转到激活页面")
-            from components.pricing_plan_page import PricingPlanPage
-            pricing_page = PricingPlanPage(self.parent())
-            self.parent().setCentralWidget(pricing_page)
+            logger.debug("未激活，显示激活弹窗")
+            pricing_page = PricingPlanPage(self)  # 创建 PricingPlanPage 的实例
+            pricing_page.exec_()  # 显示为弹窗
             return
             
         # 已激活，继续导出流程
