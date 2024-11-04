@@ -1,81 +1,13 @@
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
-                           QPushButton, QFrame, QLineEdit)
+                              QPushButton, QFrame, QLineEdit)
 from PyQt5.QtCore import Qt
 from .activation_manager import ActivationManager
 from PyQt5.QtWidgets import QMessageBox
+from PyQt5.QtGui import QPixmap
 import logging
+import os
 
 logger = logging.getLogger(__name__)
-
-class PricingCard(QFrame):
-    """价格卡片组件"""
-    def __init__(self, title, price, duration, features):
-        super().__init__()
-        self.setObjectName("pricingCard")
-        self.init_ui(title, price, duration, features)
-        
-    def init_ui(self, title, price, duration, features):
-        layout = QVBoxLayout(self)
-        layout.setAlignment(Qt.AlignCenter)
-        layout.setSpacing(20)  # 增加组件间距
-        
-        # 标题
-        title_label = QLabel(title)
-        title_label.setStyleSheet("""
-            QLabel {
-                font-size: 32px;
-                font-weight: bold;
-                color: #2c3e50;
-            }
-        """)
-        layout.addWidget(title_label, alignment=Qt.AlignCenter)
-        
-        # 价格
-        price_label = QLabel(f"¥{price}")
-        price_label.setStyleSheet("""
-            QLabel {
-                font-size: 48px;
-                font-weight: bold;
-                color: #e74c3c;
-            }
-        """)
-        layout.addWidget(price_label, alignment=Qt.AlignCenter)
-        
-        # 时长
-        duration_label = QLabel(duration)
-        duration_label.setStyleSheet("""
-            QLabel {
-                font-size: 24px;
-                color: #7f8c8d;
-            }
-        """)
-        layout.addWidget(duration_label, alignment=Qt.AlignCenter)
-        
-        # 特点列表
-        for feature in features:
-            feature_label = QLabel(feature)
-            feature_label.setStyleSheet("""
-                QLabel {
-                    font-size: 20px;
-                    color: #34495e;
-                }
-            """)
-            layout.addWidget(feature_label, alignment=Qt.AlignCenter)
-        
-        # 设置卡片样式
-        self.setStyleSheet("""
-            QFrame#pricingCard {
-                background-color: white;
-                border-radius: 20px;
-                padding: 40px;
-                margin: 20px;
-                min-width: 350px;
-                min-height: 500px;
-            }
-            QFrame#pricingCard:hover {
-                border: 2px solid #3498db;
-            }
-        """)
 
 class PricingPlanPage(QWidget):
     def __init__(self, parent=None):
@@ -95,38 +27,53 @@ class PricingPlanPage(QWidget):
         # 添加顶部空白
         main_layout.addStretch(1)
         
-        # 添加标题
-        title = QLabel("选择您的计划")
+        # 创建水平布局用于放置文字和二维码
+        info_layout = QHBoxLayout()
+        info_layout.setAlignment(Qt.AlignCenter)  # 居中对齐
+        
+        # 左侧文字描述
+        text_layout = QVBoxLayout()
+        text_layout.setAlignment(Qt.AlignLeft)  # 左对齐
+        
+        title = QLabel("购买本软件")
         title.setStyleSheet("""
             QLabel {
-                font-size: 48px;
+                font-size: 36px;
                 font-weight: bold;
                 color: #2c3e50;
-                margin-bottom: 40px;
             }
         """)
-        title.setAlignment(Qt.AlignCenter)
-        main_layout.addWidget(title)
+        text_layout.addWidget(title, alignment=Qt.AlignLeft)
         
-        # 创建卡片容器
-        cards_layout = QHBoxLayout()
-        cards_layout.setAlignment(Qt.AlignCenter)
-        cards_layout.setSpacing(30)  # 增加卡片间距
+        price_label = QLabel("价格：10元")
+        price_label.setStyleSheet("""
+            QLabel {
+                font-size: 24px;
+                color: #27ae60;  /* 使用绿色 */
+            }
+        """)
+        text_layout.addWidget(price_label, alignment=Qt.AlignLeft)
         
-        # 添加三个价格卡片
-        monthly_features = ["无限导出PDF", "基础客服支持", "自动更新"]
-        semi_annual_features = ["无限导出PDF", "优先客服支持", "自动更新", "更优惠的价格"]
-        permanent_features = ["无限导出PDF", "VIP客服支持", "自动更新", "一次付费永久使用"]
+        features_label = QLabel("功能：无限导出PDF，一次付费永久使用")
+        features_label.setStyleSheet("""
+            QLabel {
+                font-size: 20px;
+                color: #34495e;  /* 深灰色 */
+            }
+        """)
+        text_layout.addWidget(features_label, alignment=Qt.AlignLeft)
         
-        monthly_card = PricingCard("月付", "9.9", "每月", monthly_features)
-        semi_card = PricingCard("半年付", "29.9", "每6个月", semi_annual_features)
-        permanent_card = PricingCard("永久版", "99", "永久有效", permanent_features)
+        info_layout.addLayout(text_layout)  # 将文字布局添加到水平布局
         
-        cards_layout.addWidget(monthly_card)
-        cards_layout.addWidget(semi_card)
-        cards_layout.addWidget(permanent_card)
+        # 右侧二维码图片
+        qr_code_label = QLabel()
+        qr_code_path = os.path.join("resources", "qrcode.png")  # 使用资源目录中的二维码路径
+        qr_code_pixmap = QPixmap(qr_code_path)  # 加载二维码图片
+        qr_code_label.setPixmap(qr_code_pixmap.scaled(150, 150, Qt.KeepAspectRatio))  # 调整二维码大小
+        qr_code_label.setAlignment(Qt.AlignCenter)
+        info_layout.addWidget(qr_code_label, alignment=Qt.AlignRight)  # 将二维码添加到右侧
         
-        main_layout.addLayout(cards_layout)
+        main_layout.addLayout(info_layout)  # 将信息布局添加到主布局
         
         # 添加分隔空间
         main_layout.addSpacing(40)
@@ -145,8 +92,8 @@ class PricingPlanPage(QWidget):
         
         activation_layout = QVBoxLayout(activation_container)
         
-        # 添加激活码标题
-        activation_title = QLabel("已有激活码？")
+        # 添加激活码提示
+        activation_title = QLabel("购买后请输入激活码")
         activation_title.setStyleSheet("""
             QLabel {
                 font-size: 24px;
@@ -161,6 +108,7 @@ class PricingPlanPage(QWidget):
         # 创建输入区域容器
         input_container = QHBoxLayout()
         input_container.setSpacing(15)
+        input_container.setAlignment(Qt.AlignCenter)  # 居中对齐
         
         # 添加激活码输入框
         self.activation_input = QLineEdit()
@@ -171,7 +119,7 @@ class PricingPlanPage(QWidget):
                 padding: 10px;
                 border: 2px solid #bdc3c7;
                 border-radius: 8px;
-                min-width: 300px;
+                min-width: 300px;  /* 设置合适的宽度 */
             }
             QLineEdit:focus {
                 border: 2px solid #3498db;
@@ -199,18 +147,6 @@ class PricingPlanPage(QWidget):
         input_container.addWidget(activate_button)
         
         activation_layout.addLayout(input_container)
-        
-        # 添加联系方式
-        contact_label = QLabel("获取激活码请联系：example@email.com")
-        contact_label.setStyleSheet("""
-            QLabel {
-                font-size: 16px;
-                color: #7f8c8d;
-                margin-top: 10px;
-            }
-        """)
-        contact_label.setAlignment(Qt.AlignCenter)
-        activation_layout.addWidget(contact_label)
         
         main_layout.addWidget(activation_container)
         
