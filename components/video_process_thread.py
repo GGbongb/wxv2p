@@ -135,9 +135,9 @@ class VideoProcessThread(QThread):
                     
                     accumulated_movement += movement
                     
-                    vis_image = self.create_tracking_visualization(frame, accumulated_movement)
-                    if vis_image is not None:
-                        cv2.imwrite(f"{self.debug_output_dir}/tracking_{frame_count:04d}.jpg", vis_image)
+                    #vis_image = self.create_tracking_visualization(frame, accumulated_movement)
+                    #if vis_image is not None:
+                       # cv2.imwrite(f"{self.debug_output_dir}/tracking_{frame_count:04d}.jpg", vis_image)
                     
                     if accumulated_movement >= self.movement_threshold:
                         self.reference_frame = frame.copy()
