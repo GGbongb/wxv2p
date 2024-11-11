@@ -83,12 +83,12 @@ class ExportOptionsPage(QWidget):
         self.export_images_button = self.create_action_button(
             "导出全部单个图片",
             "#3498db",  # 蓝色
-            "将所有图片分别保存为独立文件"
+            "将所有图片分别保存为独立文件，免费！"
         )
         self.export_pdf_button = self.create_action_button(
             "整理为PDF文档",
             "#e74c3c",  # 红色
-            "将所有图片合并为单个PDF文件"
+            "将所有图片合并为单个PDF文件，VIP功能！"
         )
         
         center_layout.addWidget(self.export_images_button)

@@ -5,3 +5,5 @@ components/__pycache__/video_process_thread.cpython-311.pyc
 debug_output/
 myenv/
 data/
+dist/
+build/
