@@ -6,6 +6,7 @@ import base64
 from datetime import datetime, timedelta
 import sys
 import logging
+from tools.utils import resource_path
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +22,7 @@ class ActivationManager:
         
         # 文件路径
         self.activation_file = os.path.join(self.data_dir, "activation.json")
-        self.encrypted_codes_file = os.path.join(self.data_dir, "encrypted_codes.dat")
+        self.encrypted_codes_file = resource_path("data/encrypted_codes.dat")
         self.secret_key = "your_secret_key_here"
         
         self.activation_info = self.load_activation_info()
