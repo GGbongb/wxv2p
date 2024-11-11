@@ -27,6 +27,7 @@ a = Analysis(
         'win32com',
         'win32api',
         'win32con',
+        'winreg',
         'pythoncom',
         'pywintypes'
     ],

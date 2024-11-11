@@ -60,7 +60,7 @@ def check_for_file_changes():
         # 如果找不到文件，直接返回 False
         return False
 
-def check_for_updates(current_version):
+#def check_for_updates(current_version):
     """检查更新"""
     try:
         response = requests.get("https://api.github.com/repos/GGbongb/wxv2p/releases/latest")
@@ -75,7 +75,7 @@ def check_for_updates(current_version):
         print(f"检查更新时发生错误: {e}")
     return None, None
 
-def download_update(download_url):
+#def download_update(download_url):
     """下载更新文件"""
     try:
         response = requests.get(download_url)
@@ -87,7 +87,7 @@ def download_update(download_url):
         print(f"下载更新时发生错误: {e}")
     return False
 
-def install_update():
+#def install_update():
     """安装更新"""
     try:
         subprocess.call(["update.exe"])  # 运行更新程序
@@ -102,18 +102,18 @@ if __name__ == "__main__":
         print(f"快捷方式创建过程出错: {e}")
     
     current_version = "0.1"
-    latest_version, download_url = check_for_updates(current_version)
+    #latest_version, download_url = check_for_updates(current_version)
 
-    if latest_version:
-        print(f"发现新版本: {latest_version}")
-        if download_update(download_url):
-            print("更新下载完成，正在安装...")
-            install_update()
-            sys.exit()
-        else:
-            print("更新下载失败。")
-    else:
-        print("当前已是最新版本。")
+#    if latest_version:
+#        print(f"发现新版本: {latest_version}")
+#        if download_update(download_url):
+         #   print("更新下载完成，正在安装...")
+        #    install_update()
+         #   sys.exit()
+ #       else:
+ #           print("更新下载失败。")
+ #   else:
+   #     print("当前已是最新版本。")
 
     # 运行主程序
     app.run()
