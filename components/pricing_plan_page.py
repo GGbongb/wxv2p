@@ -7,6 +7,7 @@ from PyQt5.QtGui import QPixmap
 import logging
 import os
 from tools.utils import resource_path
+from .export_options_page import ExportOptionsPage  # 添加这行导入
 
 logger = logging.getLogger(__name__)
 
@@ -171,13 +172,16 @@ class PricingPlanPage(QDialog):
             
             try:
                 # 关闭当前对话框
-                self.close()  # 添加这行
-                # 返回导出页面
-                from components.export_options_page import ExportOptionsPage
-                export_page = ExportOptionsPage(self.parent())
-                self.parent().setCentralWidget(export_page)
-                # 自动开始导出
-                export_page.generate_pdf()
+                self.close()
+                
+                # 在这里导入以避免循环导入
+                from .export_options_page import ExportOptionsPage
+                # 更新父窗口的激活状态显示
+                if isinstance(self.parent(), ExportOptionsPage):
+                    self.parent().update_status_label()
+                    # 自动开始导出
+                    self.parent().generate_pdf()
+                
                 logger.debug("成功返回导出页面并开始生成PDF")
             except Exception as e:
                 logger.error(f"返回导出页面时发生错误: {str(e)}", exc_info=True)

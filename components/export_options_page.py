@@ -215,7 +215,6 @@ class ExportOptionsPage(QWidget):
                 f"导出过程中发生错误：\n{str(e)}"
             )
 
-    # 在 ExportOptionsPage 类中，找到 export_pdf 方法并修改如下：
     def export_pdf(self):
         """处理PDF导出按钮点击"""
         logger.debug("开始处理PDF导出")
@@ -223,6 +222,8 @@ class ExportOptionsPage(QWidget):
         if not self.activation_manager.is_activated():
             logger.debug("未激活，显示激活弹窗")
             pricing_page = PricingPlanPage(self)  # 创建 PricingPlanPage 的实例
+            # 连接激活成功信号
+            pricing_page.finished.connect(self.update_status_label)  # 添加这行
             pricing_page.exec_()  # 显示为弹窗
             return
             
