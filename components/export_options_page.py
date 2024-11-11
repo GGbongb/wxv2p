@@ -7,6 +7,7 @@ from .pdf_generator import PDFGenerator
 from .activation_manager import ActivationManager
 from .pricing_plan_page import PricingPlanPage
 import logging
+from tools.utils import resource_path
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +37,7 @@ class ExportOptionsPage(QWidget):
         
         # 创建返回主页按钮
         self.home_button = QPushButton()
-        self.home_button.setIcon(QIcon("resources/home.png"))
+        self.home_button.setIcon(QIcon(resource_path("resources/home.png")))
         self.home_button.setIconSize(QSize(24, 24))
         self.home_button.setText("返回主页")
         self.home_button.setStyleSheet("""
