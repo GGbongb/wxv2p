@@ -167,24 +167,20 @@ class PricingPlanPage(QDialog):
         success, message = self.activation_manager.activate(activation_code)
         
         if success:
-            logger.debug("激活成功，准备返回导出页面")
+            logger.debug("激活成功")
             QMessageBox.information(self, "成功", message)
             
             try:
-                # 关闭当前对话框
+                # 更新父窗口的激活状态
+                self.parent().update_status_label()
+                # 关闭对话框
                 self.close()
+                # 自动开始导出
+                self.parent().generate_pdf()
                 
-                # 在这里导入以避免循环导入
-                from .export_options_page import ExportOptionsPage
-                # 更新父窗口的激活状态显示
-                if isinstance(self.parent(), ExportOptionsPage):
-                    self.parent().update_status_label()
-                    # 自动开始导出
-                    self.parent().generate_pdf()
-                
-                logger.debug("成功返回导出页面并开始生成PDF")
+                logger.debug("成功更新状态并开始生成PDF")
             except Exception as e:
-                logger.error(f"返回导出页面时发生错误: {str(e)}", exc_info=True)
+                logger.error(f"更新状态时发生错误: {str(e)}", exc_info=True)
         else:
             QMessageBox.warning(self, "错误", message)
     

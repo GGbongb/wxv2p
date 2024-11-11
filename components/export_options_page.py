@@ -5,7 +5,6 @@ import os
 from datetime import datetime
 from .pdf_generator import PDFGenerator
 from .activation_manager import ActivationManager
-from .pricing_plan_page import PricingPlanPage
 import logging
 from tools.utils import resource_path
 
@@ -221,10 +220,9 @@ class ExportOptionsPage(QWidget):
         # 检查激活状态
         if not self.activation_manager.is_activated():
             logger.debug("未激活，显示激活弹窗")
-            pricing_page = PricingPlanPage(self)  # 创建 PricingPlanPage 的实例
-            # 连接激活成功信号
-            pricing_page.finished.connect(self.update_status_label)  # 添加这行
-            pricing_page.exec_()  # 显示为弹窗
+            from .pricing_plan_page import PricingPlanPage
+            pricing_page = PricingPlanPage(self)
+            pricing_page.exec_()
             return
             
         # 已激活，继续导出流程

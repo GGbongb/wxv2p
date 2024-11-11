@@ -181,7 +181,7 @@ class ImageViewer(QWidget):
     def go_to_next_step(self):
         logger.debug("点击下一步按钮")
         try:
-            # 发出切换页面的信号
+            # 只发出信号，不直接处理页面切换
             self.switch_to_export_page.emit()
             logger.debug("发出切换页面信号")
         except Exception as e:

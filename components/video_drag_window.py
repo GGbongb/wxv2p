@@ -262,3 +262,16 @@ class VideoDragDropWindow(QMainWindow):
             
         except Exception as e:
             logger.error(f"切换页面时发生错误: {str(e)}", exc_info=True)
+
+    def show_image_viewer(self, frames):
+        """显示图片查看器"""
+        self.image_viewer = ImageViewer(frames)
+        # 连接信号到槽函数
+        self.image_viewer.switch_to_export_page.connect(self.show_export_page)
+        self.setCentralWidget(self.image_viewer)
+
+    def show_export_page(self):
+        """显示导出选项页面"""
+        from components.export_options_page import ExportOptionsPage
+        export_page = ExportOptionsPage(self)
+        self.setCentralWidget(export_page)
