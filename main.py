@@ -21,7 +21,7 @@ def check_for_file_changes():
 def check_for_updates(current_version):
     """检查 GitHub Releases 是否有新版本"""
     try:
-        response = requests.get("https://api.github.com/repos/yourusername/yourrepo/releases/latest")
+        response = requests.get("https://api.github.com/repos/GGbongb/wxv2p/releases/latest")
         if response.status_code == 200:
             latest_release = response.json()
             latest_version = latest_release['tag_name']  # 获取最新版本号

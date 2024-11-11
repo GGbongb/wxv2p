@@ -43,51 +43,7 @@ class VideoProcessThread(QThread):
         """计算页面滑动速度（像素/秒）"""
         return abs(movement * fps)
 
-    def create_tracking_visualization(self, curr_frame, accumulated_movement):
-        """创建改进的可视化效果"""
-        try:
-            if self.reference_frame is None:
-                self.reference_frame = curr_frame.copy()
-                return None
-            
-            # 创建可视化图像
-            vis_image = np.hstack((self.reference_frame, curr_frame))
-            
-            # 在当前帧中画垂直线表示累积移动距离
-            height = curr_frame.shape[0]
-            start_y = height  # 从底部开始
-            end_y = start_y - accumulated_movement
-            mid_x = curr_frame.shape[1] // 2 + self.reference_frame.shape[1]
-            
-            # 画移动距离线
-            cv2.line(vis_image, 
-                    (mid_x, int(start_y)), 
-                    (mid_x, int(end_y)), 
-                    (0, 255, 0), 2)
-            
-            # 添加移动距离信息
-            font = cv2.FONT_HERSHEY_SIMPLEX
-            cv2.putText(vis_image, 
-                       f"Movement: {accumulated_movement:.1f}px", 
-                       (mid_x - 100, 30), font, 0.7, (0, 255, 0), 2)
-            
-            # 添加阈值线
-            threshold_y = start_y - self.movement_threshold
-            cv2.line(vis_image,
-                    (self.reference_frame.shape[1], int(threshold_y)),
-                    (vis_image.shape[1], int(threshold_y)),
-                    (0, 0, 255), 1)
-            
-            return vis_image
 
-        except Exception as e:
-            self.log(f"Error in create_tracking_visualization: {str(e)}")
-            return None
-        # 添加速度信息
-        cv2.putText(vis_image, 
-                    f"Speed: {current_speed:.1f} px/s", 
-                    (mid_x - 100, 90), 
-                    font, 0.7, (255, 165, 0), 2)  # 橙色显示速度
 
     def calculate_movement(self, prev_frame, curr_frame):
         """计算两帧之间的移动距离，增加鲁棒性"""
