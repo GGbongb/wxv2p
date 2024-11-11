@@ -14,8 +14,8 @@ class VideoProcessThread(QThread):
         super().__init__()
         self.video_path = video_path
         self.setup_logging()
-        self.debug_output_dir = "debug_output"
-        os.makedirs(self.debug_output_dir, exist_ok=True)
+        #self.debug_output_dir = "debug_output"
+        #os.makedirs(self.debug_output_dir, exist_ok=True)
         
         # 移除固定区域的限制
         self.reference_frame = None

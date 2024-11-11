@@ -6,6 +6,7 @@ import base64
 from datetime import datetime, timedelta
 import sys
 import logging
+import winreg
 from tools.utils import resource_path
 
 logger = logging.getLogger(__name__)
@@ -13,49 +14,41 @@ logger = logging.getLogger(__name__)
 class ActivationManager:
     def __init__(self):
         logger.debug("初始化 ActivationManager")
-        # 获取程序根目录
-        self.root_dir = self.get_root_dir()
-        # 数据文件目录
-        self.data_dir = os.path.join(self.root_dir, "data")
-        # 确保数据目录存在
-        os.makedirs(self.data_dir, exist_ok=True)
-        
-        # 文件路径
-        self.activation_file = os.path.join(self.data_dir, "activation.json")
         self.encrypted_codes_file = resource_path("data/encrypted_codes.dat")
         self.secret_key = "your_secret_key_here"
-        
+        self.registry_path = r"Software\WxV2P"
         self.activation_info = self.load_activation_info()
     
-    def get_root_dir(self):
-        """获取程序根目录"""
-        if getattr(sys, 'frozen', False):
-            # 打包后的程序
-            return os.path.dirname(sys.executable)
-        else:
-            # 开发环境
-            return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    
     def load_activation_info(self):
-        """加载激活信息"""
-        if os.path.exists(self.activation_file):
-            try:
-                with open(self.activation_file, 'r') as f:
-                    return json.load(f)
-            except:
-                return None
-        return None
+        """从注册表加载激活信息"""
+        try:
+            # 打开注册表键
+            key = winreg.CreateKey(winreg.HKEY_CURRENT_USER, self.registry_path)
+            # 读取激活信息
+            value = winreg.QueryValueEx(key, "ActivationInfo")[0]
+            winreg.CloseKey(key)
+            return json.loads(value)
+        except Exception as e:
+            logger.debug(f"加载激活信息失败: {e}")
+            return None
     
     def save_activation_info(self, info):
-        """保存激活信息"""
-        with open(self.activation_file, 'w') as f:
-            json.dump(info, f)
+        """保存激活信息到注册表"""
+        try:
+            # 创建或打开注册表键
+            key = winreg.CreateKey(winreg.HKEY_CURRENT_USER, self.registry_path)
+            # 保存激活信息
+            winreg.SetValueEx(key, "ActivationInfo", 0, winreg.REG_SZ, json.dumps(info))
+            winreg.CloseKey(key)
+            logger.debug("激活信息已保存到注册表")
+        except Exception as e:
+            logger.error(f"保存激活信息失败: {e}")
     
     def verify_code(self, code):
         """验证激活码"""
         logger.debug(f"开始验证激活码: {code}")
         
-        if not code or len(code) != 9:  # 修改这里，因为我们生成的是5+4=9位
+        if not code or len(code) != 9:
             logger.warning(f"无效的激活码格式，长度为: {len(code) if code else 0}")
             return False, "无效的激活码格式", 0
             
@@ -108,7 +101,7 @@ class ActivationManager:
     
     def activate(self, code):
         """激活软件"""
-        logger.debug(f"尝试激活软件���激活码: {code}")
+        logger.debug(f"尝试激活软件激活码: {code}")
         is_valid, message, duration_days = self.verify_code(code)
         
         if not is_valid:
@@ -126,7 +119,7 @@ class ActivationManager:
         # 保存激活信息
         self.activation_info = activation_info
         self.save_activation_info(activation_info)
-        logger.debug("激活信息已��存")
+        logger.debug("激活信息已保存到注册表")
         
         return True, message
     
