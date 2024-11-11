@@ -6,6 +6,7 @@ from PyQt5.QtWidgets import QMessageBox
 from PyQt5.QtGui import QPixmap
 import logging
 import os
+from tools.utils import resource_path
 
 logger = logging.getLogger(__name__)
 
@@ -67,7 +68,7 @@ class PricingPlanPage(QDialog):
         
         # 右侧二维码图片
         qr_code_label = QLabel()
-        qr_code_path = os.path.join("resources", "qrcode.png")  # 使用资源目录中的二维码路径
+        qr_code_path = resource_path(os.path.join("resources", "qrcode.png"))  # 使用资源目录中的二维码路径
         qr_code_pixmap = QPixmap(qr_code_path)  # 加载二维码图片
         qr_code_label.setPixmap(qr_code_pixmap.scaled(150, 150, Qt.KeepAspectRatio))  # 调整二维码大小
         qr_code_label.setAlignment(Qt.AlignCenter)

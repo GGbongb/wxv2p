@@ -3,6 +3,7 @@ from PyQt5.QtWidgets import (QWidget, QLabel, QVBoxLayout, QPushButton,
 from PyQt5.QtCore import Qt, QSize, QTimer, pyqtSignal
 from PyQt5.QtGui import QPixmap, QImage, QIcon, QColor
 import logging
+from tools.utils import resource_path
 
 # 配置日志
 logging.basicConfig(level=logging.DEBUG, 
