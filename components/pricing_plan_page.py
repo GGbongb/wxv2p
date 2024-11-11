@@ -68,7 +68,7 @@ class PricingPlanPage(QDialog):
         
         # 右侧二维码图片
         qr_code_label = QLabel()
-        qr_code_path = resource_path(resource_path(os.path.join("resources", "qrcode.png")))  # 使用资源目录中的二维码路径
+        qr_code_path = resource_path(os.path.join("resources", "qrcode.png")) 
         qr_code_pixmap = QPixmap(qr_code_path)  # 加载二维码图片
         qr_code_label.setPixmap(qr_code_pixmap.scaled(150, 150, Qt.KeepAspectRatio))  # 调整二维码大小
         qr_code_label.setAlignment(Qt.AlignCenter)
@@ -170,6 +170,8 @@ class PricingPlanPage(QDialog):
             QMessageBox.information(self, "成功", message)
             
             try:
+                # 关闭当前对话框
+                self.close()  # 添加这行
                 # 返回导出页面
                 from components.export_options_page import ExportOptionsPage
                 export_page = ExportOptionsPage(self.parent())
