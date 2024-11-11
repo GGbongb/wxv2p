@@ -5,7 +5,7 @@ block_cipher = None
 added_files = [
     # 添加资源文件
     ('resources/*.png', 'resources'),  # 所有PNG图片
-    ('data/encrypted_codes.dat', 'data'),  # 加密数据文件
+    ('data/encrypted_codes.dat', 'data'),  # 只打包加密的激活码文件
 ]
 
 a = Analysis(
