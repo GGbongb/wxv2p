@@ -34,7 +34,7 @@ class ImageViewer(QWidget):
         left_layout.addStretch(1)  # 添加弹性空间将箭头推到中间
 
         self.prev_button = QPushButton()
-        self.prev_button.setIcon(QIcon("resources/left_arrow.png"))
+        self.prev_button.setIcon(QIcon(resource_path("resources/left_arrow.png")))
         self.prev_button.setIconSize(QSize(50, 50))
         self.prev_button.setStyleSheet("background: transparent;")
         self.prev_button.clicked.connect(self.show_previous)
@@ -77,7 +77,7 @@ class ImageViewer(QWidget):
         right_layout.addStretch(1)  # 添加弹性空间将箭头推到中间
 
         self.next_button = QPushButton()
-        self.next_button.setIcon(QIcon("resources/right_arrow.png"))
+        self.next_button.setIcon(QIcon(resource_path("resources/right_arrow.png")))
         self.next_button.setIconSize(QSize(50, 50))
         self.next_button.setStyleSheet("background: transparent;")
         self.next_button.clicked.connect(self.show_next)
