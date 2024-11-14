@@ -2,6 +2,12 @@
 
 block_cipher = None
 
+author = '李洋'
+email = 'liyo84683@gmail.com'
+version = '1.0.0'
+copyright = 'Copyright (C) 2024 李洋'
+
+
 added_files = [
     # 添加资源文件
     ('resources/*.png', 'resources'),  # 所有PNG图片

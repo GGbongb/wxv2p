@@ -1,3 +1,8 @@
+# Copyright (C) 2024 李洋 <liyo84683@gmail.com>
+# All rights reserved. No modifications allowed.
+#所有权利保留。禁止修改。
+#本程序只能以其原始形式使用、分发和复制。
+#任何试图修改、逆向工程或创建衍生作品的行为都是严格禁止的。
 import sys
 import os
 import time
