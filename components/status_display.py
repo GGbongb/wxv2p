@@ -1,10 +1,12 @@
-from PyQt5.QtWidgets import (QLabel, QWidget, QHBoxLayout, QVBoxLayout, QApplication,
+from PyQt5.QtWidgets import (QLabel, QWidget, QHBoxLayout, QVBoxLayout, 
                            QFrame, QLineEdit, QPushButton, QMessageBox)
-from PyQt5.QtCore import Qt, QPropertyAnimation, QEasingCurve, QParallelAnimationGroup, QPoint
-from PyQt5.QtGui import QColor, QPixmap
+from PyQt5.QtCore import Qt, QPropertyAnimation, QEasingCurve, QParallelAnimationGroup, QPoint, QRect
+from PyQt5.QtGui import QColor, QPixmap, QCursor
 import os
 from tools.utils import resource_path
 import logging
+
+logger = logging.getLogger(__name__)
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +20,9 @@ class HoverInfoWidget(QWidget):
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.ToolTip)
         # 设置背景透明
         self.setAttribute(Qt.WA_TranslucentBackground)
+        
+        # 添加鼠标事件追踪
+        self.setMouseTracking(True)
         
     def init_ui(self):
         # 创建主布局
@@ -50,15 +55,15 @@ class HoverInfoWidget(QWidget):
             }
         """)
         content_layout = QVBoxLayout(content_widget)
-        content_layout.setSpacing(15)
-        content_layout.setContentsMargins(20, 20, 20, 20)
+        content_layout.setSpacing(20)
+        content_layout.setContentsMargins(30, 30, 30, 30)
         
         # 标题
         title = QLabel("永久版特惠")
         title.setStyleSheet("""
             QLabel {
                 color: #2c3e50;
-                font-size: 24px;
+                font-size: 28px;
                 font-weight: bold;
             }
         """)
@@ -69,7 +74,7 @@ class HoverInfoWidget(QWidget):
         price_info.setStyleSheet("""
             QLabel {
                 color: #e74c3c;
-                font-size: 18px;
+                font-size: 22px;
                 font-weight: bold;
             }
         """)
@@ -80,8 +85,8 @@ class HoverInfoWidget(QWidget):
         features.setStyleSheet("""
             QLabel {
                 color: #2c3e50;
-                font-size: 16px;
-                line-height: 1.6;
+                font-size: 18px;
+                line-height: 1.8;
             }
         """)
         content_layout.addWidget(features)
@@ -90,7 +95,7 @@ class HoverInfoWidget(QWidget):
         qr_label = QLabel()
         qr_code_path = resource_path(os.path.join("resources", "qrcode.png"))
         qr_pixmap = QPixmap(qr_code_path)
-        qr_pixmap = qr_pixmap.scaled(150, 150, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+        qr_pixmap = qr_pixmap.scaled(200, 200, Qt.KeepAspectRatio, Qt.SmoothTransformation)
         qr_label.setPixmap(qr_pixmap)
         qr_label.setAlignment(Qt.AlignCenter)
         content_layout.addWidget(qr_label)
@@ -134,12 +139,35 @@ class HoverInfoWidget(QWidget):
         # 激活码输入框
         self.activation_input = QLineEdit()
         self.activation_input.setPlaceholderText("请输入激活码")
+        self.activation_input.setMinimumHeight(40)
+        self.activation_input.setStyleSheet("""
+            QLineEdit {
+                padding: 10px;
+                border: 1px solid #bdc3c7;
+                border-radius: 4px;
+                font-size: 16px;
+            }
+        """)
         input_layout.addWidget(self.activation_input)
         
         # 激活按钮
         activate_button = QPushButton("激活")
         activate_button.setCursor(Qt.PointingHandCursor)
         activate_button.clicked.connect(self.activate_code)
+        activate_button.setMinimumHeight(40)
+        activate_button.setStyleSheet("""
+            QPushButton {
+                padding: 10px 20px;
+                background-color: #e74c3c;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                font-size: 16px;
+            }
+            QPushButton:hover {
+                background-color: #c0392b;
+            }
+        """)
         input_layout.addWidget(activate_button)
         
         activation_layout.addLayout(input_layout)
@@ -179,6 +207,15 @@ class HoverInfoWidget(QWidget):
                 self.parent().update_activation_status()
         else:
             QMessageBox.warning(self, "错误", message)
+
+    def enterEvent(self, event):
+        """鼠标进入悬浮框"""
+        # 保持显示状态
+        self.show()
+        
+    def leaveEvent(self, event):
+        """鼠标离开悬浮框"""
+        self.hide()
 
 class AnimatedPromotionLabel(QLabel):
     def __init__(self, parent=None):
@@ -227,9 +264,9 @@ class AnimatedPromotionLabel(QLabel):
         self.animation_group.addAnimation(self.color_animation)
         self.animation_group.addAnimation(self.scale_animation)
         
-        # 添加悬浮框
+        # 添加悬浮框，增加尺寸
         self.hover_widget = HoverInfoWidget(parent)
-        self.hover_widget.setFixedSize(300, 400)
+        self.hover_widget.setFixedSize(400, 600)
         
         # 鼠标追踪
         self.setMouseTracking(True)
@@ -260,8 +297,14 @@ class AnimatedPromotionLabel(QLabel):
         
     def leaveEvent(self, event):
         """鼠标离开事件"""
-        # 直接隐藏悬浮框
-        self.hover_widget.hide()
+        # 获取鼠标当前位置
+        mouse_pos = QCursor.pos()
+        
+        # 检查鼠标是否在悬浮框内
+        hover_widget_rect = QRect(self.hover_widget.pos(), self.hover_widget.size())
+        
+        if not hover_widget_rect.contains(mouse_pos):
+            self.hover_widget.hide()
 
 class StatusDisplay(QWidget):
     def __init__(self, parent=None):
