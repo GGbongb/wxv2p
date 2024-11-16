@@ -122,21 +122,29 @@ class VideoDragDropWindow(QMainWindow):
             }
         """)
         text_layout.addWidget(self.drop_area)
-
-            # 添加提示信息
-    # 添加提示信息
-        self.drop_hint = QLabel("注意：\n1. 微信聊天录屏时，速度应缓慢，否则导出效果不好；\n2. 录屏时应当从上往下翻进行录屏", self)
-        self.drop_hint.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)  # 设置为靠左对齐
+        
+        # 创建一个水平容器用于提示信息
+        hint_container = QWidget()
+        hint_container.setFixedWidth(900)  # 设置一个固定宽度
+        hint_layout = QHBoxLayout(hint_container)
+        hint_layout.setContentsMargins(0, 50, 0, 0)  # 设置上边距
+        
+        # 添加提示信息
+        self.drop_hint = QLabel("提示：\n1. 微信聊天录屏时，速度应缓慢，否则导出效果不好；\n2. 录屏时应当从上往下翻动；\n3. 通过微信发送录屏文件到电脑时选择发送原始视频；", self)
+        self.drop_hint.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
         self.drop_hint.setStyleSheet("""
             QLabel {
                 color: #95a5a6;
                 font-size: 36px;
-                line-height: 3;  /* 调整行间距 */
-                margin-top: 30px;  /* 增加顶部间距 */
+                line-height: 3;
+                padding-left: 0px;
             }
         """)
-
-        text_layout.addWidget(self.drop_hint)
+        hint_layout.addWidget(self.drop_hint, alignment=Qt.AlignLeft)
+        hint_layout.addStretch()  # 添加右侧弹性空间
+        
+        # 将提示信息容器添加到主布局，并居中
+        text_layout.addWidget(hint_container, alignment=Qt.AlignCenter)
         
         # 添加文字和按钮之间的空白
         text_layout.addStretch(3)
@@ -180,7 +188,8 @@ class VideoDragDropWindow(QMainWindow):
         urls = event.mimeData().urls()
         if urls:
             self.video_path = urls[0].toLocalFile()
-            # 保持文字样式和位置不变，只更改内容
+            
+            # 更改拖放区域文字
             self.drop_area.setStyleSheet("""
                 QLabel {
                     color: #2c3e50;
@@ -189,7 +198,12 @@ class VideoDragDropWindow(QMainWindow):
                 }
             """)
             self.drop_area.setText("文件已加载，点击开始截图")
-            self.process_button.show()  # 显示开始按钮
+            
+            # 隐藏提示信息
+            self.drop_hint.hide()
+            
+            # 显示开始按钮
+            self.process_button.show()
 
     def process_video(self):
         if not self.video_path:
