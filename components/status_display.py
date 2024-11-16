@@ -198,15 +198,26 @@ class HoverInfoWidget(QWidget):
             QMessageBox.warning(self, "提示", "请输入激活码")
             return
             
-        success, message, duration = activation_manager.verify_code(code)
+        # 使用 activate 方法而不是 verify_code
+        success, message = activation_manager.activate(code)
         if success:
-            QMessageBox.information(self, "成功", "激活成功！")
+            QMessageBox.information(self, "成功", message)  # 使用返回的消息
             self.hide()
-            # 通知父窗口更新激活状态
-            if self.parent():
-                self.parent().update_activation_status()
+            
+            # 更新状态显示
+            main_window = self.window()
+            if hasattr(main_window, 'update_activation_status'):
+                main_window.update_activation_status()
+                logger.debug("主窗口激活状态已更新")
+            
+            # 同时更新 StatusDisplay
+            status_display = self.parent()
+            if isinstance(status_display, StatusDisplay):
+                status_display.update_status(True)
+                logger.debug("状态显示已更新")
         else:
             QMessageBox.warning(self, "错误", message)
+            logger.debug(f"激活失败: {message}")
 
     def enterEvent(self, event):
         """鼠标进入悬浮框"""
@@ -350,6 +361,7 @@ class StatusDisplay(QWidget):
         activation_manager = ActivationManager()
         remaining_days, remaining_hours = activation_manager.get_remaining_time()
         
+        # 更新状态显示
         if is_activated:
             if remaining_days > 3650:  # 永久版
                 self.promotion_label.hide()

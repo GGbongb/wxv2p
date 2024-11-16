@@ -61,7 +61,7 @@ class ActivationManager:
             logger.debug("开始读取加密文件")
             with open(self.encrypted_codes_file, 'rb') as f:
                 encrypted_data = f.read()
-                logger.debug("成功读取加密数据")
+                logger.debug("���功读取加密数据")
                 
                 decrypted_data = self.decrypt_data(encrypted_data)
                 logger.debug("成功解密数据")
@@ -102,27 +102,49 @@ class ActivationManager:
     
     def activate(self, code):
         """激活软件"""
-        logger.debug(f"尝试激活软件激活码: {code}")
+        logger.debug(f"尝试激活软件，激活码: {code}")
         is_valid, message, duration_days = self.verify_code(code)
         
         if not is_valid:
             logger.warning(f"激活失败: {message}")
             return False, message
+        
+        try:
+            # 检查是否已经激活
+            if self.is_activated():
+                current_duration = self.activation_info.get("duration_days", 0)
+                logger.debug(f"当前激活期限: {current_duration}天")
+                
+                # 如果当前是更长期限的版本，不允许降级
+                if current_duration > duration_days:
+                    logger.warning("当前已激活更高级的版本，不允许降级")
+                    return False, "当前已激活更高级的版本，无需重复激活"
+                # 如果是永久版，允许覆盖任何版本
+                elif duration_days > 3650:
+                    logger.debug("升级到永久版")
+                # 如果新版本期限更短，不允许激活
+                elif current_duration > 0 and duration_days <= current_duration:
+                    logger.warning("不允许激活更低级的版本")
+                    return False, "当前版本已激活，无需重复激活"
             
-        # 创建激活信息
-        activation_info = {
-            "code": code,
-            "activation_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "expiry_date": (datetime.now() + timedelta(days=duration_days)).strftime("%Y-%m-%d %H:%M:%S"),
-            "duration_days": duration_days
-        }
-        
-        # 保存激活信息
-        self.activation_info = activation_info
-        self.save_activation_info(activation_info)
-        logger.debug("激活信息已保存到注册表")
-        
-        return True, message
+            # 创建激活信息
+            activation_info = {
+                "code": code,
+                "activation_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "expiry_date": (datetime.now() + timedelta(days=duration_days)).strftime("%Y-%m-%d %H:%M:%S"),
+                "duration_days": duration_days
+            }
+            
+            # 保存激活信息
+            self.activation_info = activation_info
+            self.save_activation_info(activation_info)
+            logger.debug("激活信息已成功保存到注册表")
+            
+            return True, "激活成功" if duration_days <= 3650 else "成功升级到永久版"
+            
+        except Exception as e:
+            logger.error(f"激活过程中发生错误: {str(e)}", exc_info=True)
+            return False, f"激活失败: {str(e)}"
     
     def is_activated(self):
         """检查是否已激活且在有效期内"""
