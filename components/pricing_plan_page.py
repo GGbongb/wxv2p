@@ -18,6 +18,13 @@ class PricingPlanPage(QDialog):
         self.init_ui()
         
     def init_ui(self):
+        # 设置窗口背景色
+        self.setStyleSheet("""
+            QDialog {
+                background-color: #f5f6fa;
+            }
+        """)
+        
         # 创建主布局
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(60, 60, 60, 60)
@@ -43,33 +50,33 @@ class PricingPlanPage(QDialog):
         # 试用版方案
         trial_plan = self.create_plan_card(
             "7天试用版",
-            "🛠️ 7元",
+            "7",
+            "元",
             [
                 "✓ 不限次数自由使用"
-            ],
-            "#000000"  # 黑色边框
+            ]
         )
         plans_layout.addWidget(trial_plan)
         
         # 永久版方案
         permanent_plan = self.create_plan_card(
             "永久版",
-            "🌟 50元",
+            "50",
+            "元",
             [
                 "✓ 一次付费，永久拥有"
-            ],
-            "#000000"  # 黑色边框
+            ]
         )
         plans_layout.addWidget(permanent_plan)
         
         # 优惠升级方案
         upgrade_plan = self.create_plan_card(
             "限时优惠",
-            "⏳ 40元",
+            "40",
+            "元",
             [
                 "✓ 仅限试用结束7天内"
-            ],
-            "#000000"  # 黑色边框
+            ]
         )
         plans_layout.addWidget(upgrade_plan)
         
@@ -152,21 +159,25 @@ class PricingPlanPage(QDialog):
         activation_layout.addLayout(input_container)
         main_layout.addWidget(activation_container)
 
-    def create_plan_card(self, title, price, features, color):
+    def create_plan_card(self, title, price, unit, features):
         """创建价格方案卡片"""
         card = QFrame()
         card.setStyleSheet("""
             QFrame {
                 background-color: white;
-                border: 2px solid #000000;
                 border-radius: 15px;
-                padding: 30px;
-                min-width: 280px;
+                padding: 40px 30px;
+                min-width: 200px;
+            }
+            QFrame:hover {
+                background-color: #ffffff;
+                box-shadow: 0 8px 16px rgba(0,0,0,0.1);
             }
         """)
         
         layout = QVBoxLayout(card)
         layout.setAlignment(Qt.AlignCenter)
+        layout.setSpacing(20)
         
         # 标题
         title_label = QLabel(title)
@@ -175,24 +186,38 @@ class PricingPlanPage(QDialog):
                 font-size: 28px;
                 font-weight: bold;
                 color: #2c3e50;
-                margin-bottom: 20px;
             }
         """)
         title_label.setAlignment(Qt.AlignCenter)
         layout.addWidget(title_label)
         
-        # 价格
+        # 价格区域
+        price_container = QHBoxLayout()
+        price_container.setAlignment(Qt.AlignCenter)
+        
+        # 价格数字
         price_label = QLabel(price)
         price_label.setStyleSheet("""
             QLabel {
-                font-size: 38px;
+                font-size: 48px;
                 font-weight: bold;
                 color: #2c3e50;
-                margin: 20px 0;
             }
         """)
-        price_label.setAlignment(Qt.AlignCenter)
-        layout.addWidget(price_label)
+        
+        # 单位
+        unit_label = QLabel(unit)
+        unit_label.setStyleSheet("""
+            QLabel {
+                font-size: 24px;
+                color: #7f8c8d;
+                margin-top: 8px;
+            }
+        """)
+        
+        price_container.addWidget(price_label)
+        price_container.addWidget(unit_label)
+        layout.addLayout(price_container)
         
         # 功能列表
         for feature in features:
@@ -201,7 +226,7 @@ class PricingPlanPage(QDialog):
                 QLabel {
                     font-size: 18px;
                     color: #27ae60;
-                    margin: 10px 0;
+                    margin: 5px 0;
                 }
             """)
             feature_label.setAlignment(Qt.AlignCenter)
