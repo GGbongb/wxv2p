@@ -52,9 +52,8 @@ class VideoDragDropWindow(QMainWindow):
         activation_manager = ActivationManager()
         
         is_activated = activation_manager.is_activated()
-        remaining_days = activation_manager.get_remaining_days() if is_activated else 0
-        
-        self.status_display.update_status(is_activated, remaining_days)
+        # 不再需要传递remaining_days参数，因为StatusDisplay会自己获取详细时间
+        self.status_display.update_status(is_activated)
 
     def init_drag_drop_ui(self):
         # 创建一个容器用于文字显示

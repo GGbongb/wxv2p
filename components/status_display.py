@@ -28,7 +28,7 @@ class StatusDisplay(QWidget):
         self.promotion_label.setStyleSheet("""
             QLabel {
                 color: #e74c3c;
-                font-size: 16px;
+                font-size: 28px;
                 padding: 5px 10px;
             }
         """)
@@ -51,6 +51,10 @@ class StatusDisplay(QWidget):
         
     def update_status(self, is_activated, remaining_days=0):
         """更新状态显示"""
+        from components.activation_manager import ActivationManager
+        activation_manager = ActivationManager()
+        remaining_days, remaining_hours = activation_manager.get_remaining_time()
+        
         if is_activated:
             if remaining_days > 3650:  # 永久版
                 self.promotion_label.hide()
@@ -58,20 +62,20 @@ class StatusDisplay(QWidget):
                 style = """
                     QLabel {
                         color: #27ae60;
-                        font-size: 16px;
+                        font-size: 28px;
                         padding: 5px 10px;
                         background-color: #e8f5e9;
                         border-radius: 4px;
                     }
                 """
-            elif remaining_days == 7:  # 7天体验期
+            elif remaining_days == 7 or (remaining_days == 6 and remaining_hours > 0):  # 7天体验期
                 self.promotion_label.show()
                 self.promotion_label.setText("限时折扣：7天体验期内购买永久版可享受10元优惠，仅需40元")
-                status_text = f"体验期剩余：{remaining_days}天"
+                status_text = f"体验期剩余：{remaining_days}天{remaining_hours}小时"
                 style = """
                     QLabel {
                         color: #e67e22;
-                        font-size: 16px;
+                        font-size: 28px;
                         padding: 5px 10px;
                         background-color: #ffeaa7;
                         border-radius: 4px;
@@ -79,11 +83,11 @@ class StatusDisplay(QWidget):
                 """
             else:
                 self.promotion_label.hide()
-                status_text = f"剩余使用时间：{remaining_days}天"
+                status_text = f"剩余使用时间：{remaining_days}天{remaining_hours}小时"
                 style = """
                     QLabel {
                         color: #27ae60;
-                        font-size: 16px;
+                        font-size: 28px;
                         padding: 5px 10px;
                         background-color: #e8f5e9;
                         border-radius: 4px;
