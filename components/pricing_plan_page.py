@@ -82,7 +82,7 @@ class PricingPlanPage(QDialog):
         
         main_layout.addLayout(plans_layout)
         
-        # 添加二维码和说明
+        # 添加二维码和明
         payment_layout = QHBoxLayout()
         
         # 左侧支付说明
@@ -162,12 +162,13 @@ class PricingPlanPage(QDialog):
     def create_plan_card(self, title, price, unit, features):
         """创建价格方案卡片"""
         card = QFrame()
+        card.setFixedWidth(400)
+        card.setMinimumHeight(350)
         card.setStyleSheet("""
             QFrame {
                 background-color: white;
                 border-radius: 15px;
                 padding: 40px 30px;
-                min-width: 200px;
             }
             QFrame:hover {
                 background-color: #ffffff;
@@ -176,42 +177,42 @@ class PricingPlanPage(QDialog):
         """)
         
         layout = QVBoxLayout(card)
-        layout.setAlignment(Qt.AlignCenter)
-        layout.setSpacing(20)
+        layout.setAlignment(Qt.AlignHCenter)
+        layout.setSpacing(25)
+        layout.setContentsMargins(20, 30, 20, 30)
         
-        # 标题
         title_label = QLabel(title)
         title_label.setStyleSheet("""
             QLabel {
-                font-size: 28px;
+                font-size: 32px;
                 font-weight: bold;
                 color: #2c3e50;
             }
         """)
         title_label.setAlignment(Qt.AlignCenter)
+        title_label.setWordWrap(True)
         layout.addWidget(title_label)
         
-        # 价格区域
         price_container = QHBoxLayout()
         price_container.setAlignment(Qt.AlignCenter)
         
-        # 价格数字
         price_label = QLabel(price)
         price_label.setStyleSheet("""
             QLabel {
-                font-size: 48px;
+                font-size: 56px;
                 font-weight: bold;
                 color: #2c3e50;
             }
         """)
+        price_label.setAlignment(Qt.AlignCenter)
         
-        # 单位
         unit_label = QLabel(unit)
         unit_label.setStyleSheet("""
             QLabel {
-                font-size: 24px;
+                font-size: 40px;
                 color: #7f8c8d;
-                margin-top: 8px;
+                margin-top: 15px;
+                margin-left: 5px;
             }
         """)
         
@@ -219,17 +220,17 @@ class PricingPlanPage(QDialog):
         price_container.addWidget(unit_label)
         layout.addLayout(price_container)
         
-        # 功能列表
         for feature in features:
             feature_label = QLabel(feature)
             feature_label.setStyleSheet("""
                 QLabel {
-                    font-size: 18px;
+                    font-size: 24px;
                     color: #27ae60;
-                    margin: 5px 0;
+                    margin: 8px 0;
                 }
             """)
             feature_label.setAlignment(Qt.AlignCenter)
+            feature_label.setWordWrap(True)
             layout.addWidget(feature_label)
         
         layout.addStretch()
