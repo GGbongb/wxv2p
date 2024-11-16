@@ -8,3 +8,4 @@ data/
 dist/
 build/
 data/encrypted_codes.dat
+/data
