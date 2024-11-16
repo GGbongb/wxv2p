@@ -174,7 +174,7 @@ class AnimatedPromotionLabel(QLabel):
     def enterEvent(self, event):
         """鼠标进入事件"""
         # 计算悬浮框位置（在标签正下方显示）
-        pos = self.mapToGlobal(QPoint(0, self.height() + 5))  # 在标签下方5像素处
+        pos = self.mapToGlobal(QPoint(0, self.height() + 5))
         
         # 水平居中对齐
         pos.setX(pos.x() + (self.width() - self.hover_widget.width()) // 2)
@@ -184,11 +184,8 @@ class AnimatedPromotionLabel(QLabel):
         
     def leaveEvent(self, event):
         """鼠标离开事件"""
-        # 检查鼠标是否移动到了悬浮框上
-        hover_widget_rect = self.hover_widget.geometry()
-        mouse_pos = self.mapToGlobal(event.pos())
-        if not hover_widget_rect.contains(mouse_pos):
-            self.hover_widget.hide()
+        # 直接隐藏悬浮框
+        self.hover_widget.hide()
 
 class StatusDisplay(QWidget):
     def __init__(self, parent=None):
