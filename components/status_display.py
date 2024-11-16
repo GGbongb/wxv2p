@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import (QLabel, QWidget, QHBoxLayout, QVBoxLayout, QApplication,
-                           QFrame)
+                           QFrame, QLineEdit, QPushButton, QMessageBox)
 from PyQt5.QtCore import Qt, QPropertyAnimation, QEasingCurve, QParallelAnimationGroup, QPoint
 from PyQt5.QtGui import QColor, QPixmap
 import os
@@ -30,6 +30,23 @@ class HoverInfoWidget(QWidget):
             QWidget {
                 background-color: white;
                 border-radius: 8px;
+            }
+            QLineEdit {
+                padding: 8px;
+                border: 1px solid #bdc3c7;
+                border-radius: 4px;
+                font-size: 14px;
+            }
+            QPushButton {
+                padding: 8px 15px;
+                background-color: #e74c3c;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                font-size: 14px;
+            }
+            QPushButton:hover {
+                background-color: #c0392b;
             }
         """)
         content_layout = QVBoxLayout(content_widget)
@@ -89,6 +106,45 @@ class HoverInfoWidget(QWidget):
         scan_hint.setAlignment(Qt.AlignCenter)
         content_layout.addWidget(scan_hint)
         
+        # 添加分割线
+        separator = QFrame()
+        separator.setFrameShape(QFrame.HLine)
+        separator.setStyleSheet("background-color: #ecf0f1;")
+        content_layout.addWidget(separator)
+        
+        # 添加激活区域
+        activation_widget = QWidget()
+        activation_layout = QVBoxLayout(activation_widget)
+        activation_layout.setSpacing(10)
+        
+        # 激活标题
+        activation_title = QLabel("已购买？立即激活")
+        activation_title.setStyleSheet("""
+            QLabel {
+                color: #2c3e50;
+                font-size: 16px;
+                font-weight: bold;
+            }
+        """)
+        activation_layout.addWidget(activation_title)
+        
+        # 激活码输入框和按钮的水平布局
+        input_layout = QHBoxLayout()
+        
+        # 激活码输入框
+        self.activation_input = QLineEdit()
+        self.activation_input.setPlaceholderText("请输入激活码")
+        input_layout.addWidget(self.activation_input)
+        
+        # 激活按钮
+        activate_button = QPushButton("激活")
+        activate_button.setCursor(Qt.PointingHandCursor)
+        activate_button.clicked.connect(self.activate_code)
+        input_layout.addWidget(activate_button)
+        
+        activation_layout.addLayout(input_layout)
+        content_layout.addWidget(activation_widget)
+        
         # 添加内容容器到主布局
         main_layout.addWidget(content_widget)
         
@@ -103,6 +159,26 @@ class HoverInfoWidget(QWidget):
         shadow.setColor(QColor(0, 0, 0, 30))
         shadow.setOffset(0, 4)
         return shadow
+
+    def activate_code(self):
+        """激活码验证处理"""
+        from components.activation_manager import ActivationManager
+        activation_manager = ActivationManager()
+        
+        code = self.activation_input.text().strip()
+        if not code:
+            QMessageBox.warning(self, "提示", "请输入激活码")
+            return
+            
+        success, message, duration = activation_manager.verify_code(code)
+        if success:
+            QMessageBox.information(self, "成功", "激活成功！")
+            self.hide()
+            # 通知父窗口更新激活状态
+            if self.parent():
+                self.parent().update_activation_status()
+        else:
+            QMessageBox.warning(self, "错误", message)
 
 class AnimatedPromotionLabel(QLabel):
     def __init__(self, parent=None):
