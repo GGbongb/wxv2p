@@ -164,25 +164,44 @@ class ExportOptionsPage(QWidget):
 
     def export_images(self):
         """导出所有图片到选择的文件夹"""
-        print("导出图片方法被调用")  # 添加这行用于测试
+        logger.debug("开始处理图片导出")
+        # 检查激活状态
+        if not self.activation_manager.is_activated():
+            logger.debug("未激活，显示激活弹窗")
+            from .pricing_plan_page import PricingPlanPage
+            pricing_page = PricingPlanPage(self)
+            pricing_page.exec_()
+            return
+            
+        # 已激活，继续导出流程
+        logger.debug("已激活，开始导出图片")
+        try:
+            self.generate_images()
+        except Exception as e:
+            logger.error(f"导出图片时发生错误: {str(e)}", exc_info=True)
+
+    def generate_images(self):
+        """生成图片文件"""
+        logger.debug("开始导出图片文件")
         from components.image_viewer import ImageViewer
         
         if not ImageViewer.processed_images:
             QMessageBox.warning(self, "警告", "没有可导出的图片！")
             return
             
-        # 获取用户选择的保存目录
-        folder_path = QFileDialog.getExistingDirectory(
-            self,
-            "选择保存目录",
-            os.path.expanduser("~/Desktop"),  # 默认打开桌面
-            QFileDialog.ShowDirsOnly
-        )
-        
-        if not folder_path:  # 用户取消选择
-            return
-            
         try:
+            # 获取用户选择的保存目录
+            folder_path = QFileDialog.getExistingDirectory(
+                self,
+                "选择保存目录",
+                os.path.expanduser("~/Desktop"),  # 默认打开桌面
+                QFileDialog.ShowDirsOnly
+            )
+            
+            if not folder_path:  # 用户取消选择
+                logger.debug("用户取消了保存操作")
+                return
+                
             # 创建以当前时间命名的子文件夹
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             export_folder = os.path.join(folder_path, f"微信聊天记录_{timestamp}")
@@ -204,8 +223,10 @@ class ExportOptionsPage(QWidget):
                 "导出成功",
                 f"已成功导出 {total} 张图片到:\n{export_folder}"
             )
+            logger.debug(f"成功导出 {total} 张图片到 {export_folder}")
             
         except Exception as e:
+            logger.error(f"导出图片过程中发生错误: {str(e)}", exc_info=True)
             QMessageBox.critical(
                 self,
                 "导出失败",

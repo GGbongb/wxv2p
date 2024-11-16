@@ -50,8 +50,8 @@ class PricingPlanPage(QDialog):
         # 试用版方案
         trial_plan = self.create_plan_card(
             "7天试用版",
-            "7",
-            "元",
+            "7元",
+            None,
             [
                 "✓ 7天内不限次数使用"
             ]
@@ -61,8 +61,8 @@ class PricingPlanPage(QDialog):
         # 永久版方案
         permanent_plan = self.create_plan_card(
             "永久版",
-            "50",
-            "元",
+            "50元",
+            None,
             [
                 "✓ 一次付费，永久拥有"
             ]
@@ -94,7 +94,7 @@ class PricingPlanPage(QDialog):
         input_container.setSpacing(15)
         
         self.activation_input = QLineEdit()
-        self.activation_input.setPlaceholderText("请输入激活码")
+        self.activation_input.setPlaceholderText("请输入购买的激活码")
         self.activation_input.setStyleSheet("""
             QLineEdit {
                 font-size: 24px;
@@ -164,9 +164,6 @@ class PricingPlanPage(QDialog):
         title_label.setWordWrap(True)
         layout.addWidget(title_label)
         
-        price_container = QHBoxLayout()
-        price_container.setAlignment(Qt.AlignCenter)
-        
         price_label = QLabel(price)
         price_label.setStyleSheet("""
             QLabel {
@@ -176,26 +173,13 @@ class PricingPlanPage(QDialog):
             }
         """)
         price_label.setAlignment(Qt.AlignCenter)
-        
-        unit_label = QLabel(unit)
-        unit_label.setStyleSheet("""
-            QLabel {
-                font-size: 45px;
-                color: #7f8c8d;
-                margin-top: 15px;
-                margin-left: 5px;
-            }
-        """)
-        
-        price_container.addWidget(price_label)
-        price_container.addWidget(unit_label)
-        layout.addLayout(price_container)
+        layout.addWidget(price_label)
         
         for feature in features:
             feature_label = QLabel(feature)
             feature_label.setStyleSheet("""
                 QLabel {
-                    font-size: 24px;
+                    font-size: 28px;
                     color: #27ae60;
                     margin: 8px 0;
                 }
