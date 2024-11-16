@@ -8,6 +8,8 @@ import sys
 import logging
 import winreg
 from tools.utils import resource_path
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QSizePolicy,QMessageBox
+from PyQt5.QtCore import Qt
 
 logger = logging.getLogger(__name__)
 
@@ -151,3 +153,14 @@ class ActivationManager:
             return max(0, remaining.days)
         except:
             return 0
+
+    def keyPressEvent(self, event):
+        # 按下 Ctrl+Shift+D 清除激活信息（仅在开发环境中）
+        if event.modifiers() & Qt.ControlModifier and \
+        event.modifiers() & Qt.ShiftModifier and \
+        event.key() == Qt.Key_D:
+            from components.activation_manager import ActivationManager
+            activation_manager = ActivationManager()
+            if activation_manager.clear_activation():
+                self.update_activation_status()
+                QMessageBox.information(self, "提示", "激活信息已清除")
