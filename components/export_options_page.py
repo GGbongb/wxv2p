@@ -24,7 +24,7 @@ class ExportOptionsPage(QWidget):
         
     def init_ui(self):
         # 设置整个窗口的背景色
-        self.setStyleSheet("background-color: #FFF5E6;")  # 更浅的暖色调背景
+        #self.setStyleSheet("background-color: #FFF5E6;")  # 更浅的暖色调背景
         
         # 创建主布局
         main_layout = QVBoxLayout(self)
@@ -44,9 +44,9 @@ class ExportOptionsPage(QWidget):
                 background-color: #2c3e50;
                 color: white;
                 border: none;
-                border-radius: 15px;
-                padding: 8px 15px;
-                font-size: 16px;
+                border-radius: 20px;
+                padding: 8px 20px;
+                font-size: 20px;
                 font-weight: bold;
             }
             QPushButton:hover {
@@ -60,13 +60,13 @@ class ExportOptionsPage(QWidget):
         main_layout.addLayout(top_layout)
         
         # 添加标题
-        title_label = QLabel("选择导出方式")
+        title_label = QLabel("选择以下两种导出方式")
         title_label.setAlignment(Qt.AlignCenter)
         title_label.setStyleSheet("""
             QLabel {
                 font-size: 48px;
                 font-weight: bold;
-                margin: 40px 0;
+                margin: 100px 0;
             }
         """)
         main_layout.addWidget(title_label)

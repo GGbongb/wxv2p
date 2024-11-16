@@ -129,20 +129,23 @@ class VideoDragDropWindow(QMainWindow):
         # 创建一个水平容器用于提示信息
         hint_container = QWidget()
         hint_container.setFixedWidth(900)  # 设置一个固定宽度
+        hint_container.setMinimumHeight(600)  # 添加最小高度，确保能显示所有内容    
         hint_layout = QHBoxLayout(hint_container)
-        hint_layout.setContentsMargins(0, 50, 0, 0)  # 设置上边距
+        hint_layout.setContentsMargins(0, 50, 0, 50)  # 设置上边距
         
         # 添加提示信息
-        self.drop_hint = QLabel("提示：\n1. 微信聊天录屏时，速度应缓慢，否则导出效果不好；\n2. 录屏时应当从上往下翻动；\n3. 通过微信发送录屏文件到电脑时选择发送原始视频；", self)
+        self.drop_hint = QLabel("\n本软件可以从微信聊天记录录屏文件提取连续内容的截图，并可以导出为PDF或图片，无需手动截图，极大节省时间，是律师处理微信聊天证据的最佳效率工具。\n\n使用时注意：\n\n1. 对微信聊天录屏时，应匀速缓慢滑动录屏，否则导出效果不好；\n\n2. 录屏时应当从上往下翻动。", self)
         self.drop_hint.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
         self.drop_hint.setStyleSheet("""
             QLabel {
                 color: #95a5a6;
                 font-size: 36px;
-                line-height: 3;
+                line-height: 1.8;  /* 增加行高 */
                 padding-left: 0px;
+                margin: 30px 0;    /* 增加上下边距 */  
             }
         """)
+        self.drop_hint.setWordWrap(True)  # 启用自动换行
         hint_layout.addWidget(self.drop_hint, alignment=Qt.AlignLeft)
         hint_layout.addStretch()  # 添加右侧弹性空间
         
