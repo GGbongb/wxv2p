@@ -18,69 +18,94 @@ class PricingPlanPage(QDialog):
         self.init_ui()
         
     def init_ui(self):
-        # 设置背景色
-        #self.setStyleSheet("background-color: #f5f6fa;")
-        
         # 创建主布局
         main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(60, 60, 60, 60)  # 增加页面边距
-        main_layout.setSpacing(40)  # 增加组件间距
+        main_layout.setContentsMargins(60, 60, 60, 60)
+        main_layout.setSpacing(40)
         
-        # 添加顶部空白
-        main_layout.addStretch(1)
-        
-        # 创建水平布局用于放置文字和二维码
-        info_layout = QHBoxLayout()
-        info_layout.setAlignment(Qt.AlignCenter)  # 居中对齐
-        
-        # 左侧文字描述
-        text_layout = QVBoxLayout()
-        text_layout.setAlignment(Qt.AlignLeft)  # 左对齐
-        
-        title = QLabel("购买本软件")
+        # 添加顶部标题
+        title = QLabel("选择您的使用方案")
         title.setStyleSheet("""
             QLabel {
                 font-size: 36px;
                 font-weight: bold;
                 color: #2c3e50;
+                margin-bottom: 20px;
             }
         """)
-        text_layout.addWidget(title, alignment=Qt.AlignLeft)
+        title.setAlignment(Qt.AlignCenter)
+        main_layout.addWidget(title)
         
-        price_label = QLabel("价格：10元")
-        price_label.setStyleSheet("""
-            QLabel {
-                font-size: 24px;
-                color: #27ae60;  /* 使用绿色 */
-            }
-        """)
-        text_layout.addWidget(price_label, alignment=Qt.AlignLeft)
+        # 创建价格方案容器
+        plans_layout = QHBoxLayout()
+        plans_layout.setSpacing(30)
         
-        features_label = QLabel("功能：无限导出PDF，一次付费永久使用")
-        features_label.setStyleSheet("""
+        # 试用版方案
+        trial_plan = self.create_plan_card(
+            "7天试用版",
+            "7元",
+            [
+                "✓ 7天内无限次使用",
+                "✓ 导出PDF和图片",
+                "✓ 试用结束后可升级永久版"
+            ],
+            "#3498db"  # 蓝色主题
+        )
+        plans_layout.addWidget(trial_plan)
+        
+        # 优惠升级方案
+        upgrade_plan = self.create_plan_card(
+            "限时优惠升级",
+            "40元",
+            [
+                "✓ 永久无限次使用",
+                "✓ 导出PDF和图片",
+                "✓ 仅限试用到期7天内",
+                "✓ 立省10元"
+            ],
+            "#e74c3c"  # 红色主题，突出优惠
+        )
+        plans_layout.addWidget(upgrade_plan)
+        
+        # 永久版方案
+        permanent_plan = self.create_plan_card(
+            "永久版",
+            "50元",
+            [
+                "✓ 永久无限次使用",
+                "✓ 导出PDF和图片",
+                "✓ 终身技术支持",
+                "✓ 一次付费永久拥有"
+            ],
+            "#27ae60"  # 绿色主题
+        )
+        plans_layout.addWidget(permanent_plan)
+        
+        main_layout.addLayout(plans_layout)
+        
+        # 添加二维码和说明
+        payment_layout = QHBoxLayout()
+        
+        # 左侧支付说明
+        payment_info = QLabel("扫描右侧二维码付款后，请联系客服获取激活码")
+        payment_info.setStyleSheet("""
             QLabel {
                 font-size: 20px;
-                color: #34495e;  /* 深灰色 */
+                color: #7f8c8d;
             }
         """)
-        text_layout.addWidget(features_label, alignment=Qt.AlignLeft)
+        payment_layout.addWidget(payment_info)
         
-        info_layout.addLayout(text_layout)  # 将文字布局添加到水平布局
-        
-        # 右侧二维码图片
+        # 右侧二维码
         qr_code_label = QLabel()
-        qr_code_path = resource_path(os.path.join("resources", "qrcode.png")) 
-        qr_code_pixmap = QPixmap(qr_code_path)  # 加载二维码图片
-        qr_code_label.setPixmap(qr_code_pixmap.scaled(150, 150, Qt.KeepAspectRatio))  # 调整二维码大小
-        qr_code_label.setAlignment(Qt.AlignCenter)
-        info_layout.addWidget(qr_code_label, alignment=Qt.AlignRight)  # 将二维码添加到右侧
+        qr_code_path = resource_path(os.path.join("resources", "qrcode.png"))
+        qr_code_pixmap = QPixmap(qr_code_path)
+        qr_code_label.setPixmap(qr_code_pixmap.scaled(150, 150, Qt.KeepAspectRatio))
+        payment_layout.addWidget(qr_code_label)
         
-        main_layout.addLayout(info_layout)  # 将信息布局添加到主布局
+        main_layout.addLayout(payment_layout)
         
-        # 添加分隔空间
-        main_layout.addSpacing(40)
-        
-        # 添加激活码区域
+        # 添加激活码输入区域
         activation_container = QFrame()
         activation_container.setObjectName("activationContainer")
         activation_container.setStyleSheet("""
@@ -88,31 +113,16 @@ class PricingPlanPage(QDialog):
                 background-color: white;
                 border-radius: 15px;
                 padding: 20px;
-                margin: 20px 100px;
+                margin: 20px 0;
             }
         """)
         
         activation_layout = QVBoxLayout(activation_container)
         
-        # 添加激活码提示
-        activation_title = QLabel("购买后请输入激活码")
-        activation_title.setStyleSheet("""
-            QLabel {
-                font-size: 24px;
-                font-weight: bold;
-                color: #2c3e50;
-                margin-bottom: 10px;
-            }
-        """)
-        activation_title.setAlignment(Qt.AlignCenter)
-        activation_layout.addWidget(activation_title)
-        
-        # 创建输入区域容器
+        # 激活码输入区域
         input_container = QHBoxLayout()
         input_container.setSpacing(15)
-        input_container.setAlignment(Qt.AlignCenter)  # 居中对齐
         
-        # 添加激活码输入框
         self.activation_input = QLineEdit()
         self.activation_input.setPlaceholderText("请输入激活码")
         self.activation_input.setStyleSheet("""
@@ -121,7 +131,7 @@ class PricingPlanPage(QDialog):
                 padding: 10px;
                 border: 2px solid #bdc3c7;
                 border-radius: 8px;
-                min-width: 300px;  /* 设置合适的宽度 */
+                min-width: 300px;
             }
             QLineEdit:focus {
                 border: 2px solid #3498db;
@@ -129,7 +139,6 @@ class PricingPlanPage(QDialog):
         """)
         input_container.addWidget(self.activation_input)
         
-        # 添加激活按钮
         activate_button = QPushButton("激活")
         activate_button.setStyleSheet("""
             QPushButton {
@@ -149,12 +158,64 @@ class PricingPlanPage(QDialog):
         input_container.addWidget(activate_button)
         
         activation_layout.addLayout(input_container)
-        
         main_layout.addWidget(activation_container)
-        
-        # 添加底部空白
-        main_layout.addStretch(1)
 
+    def create_plan_card(self, title, price, features, color):
+        """创建价格方案卡片"""
+        card = QFrame()
+        card.setStyleSheet(f"""
+            QFrame {{
+                background-color: white;
+                border: 2px solid {color};
+                border-radius: 15px;
+                padding: 20px;
+                min-width: 250px;
+            }}
+        """)
+        
+        layout = QVBoxLayout(card)
+        
+        # 标题
+        title_label = QLabel(title)
+        title_label.setStyleSheet(f"""
+            QLabel {{
+                font-size: 24px;
+                font-weight: bold;
+                color: {color};
+                margin-bottom: 10px;
+            }}
+        """)
+        title_label.setAlignment(Qt.AlignCenter)
+        layout.addWidget(title_label)
+        
+        # 价格
+        price_label = QLabel(price)
+        price_label.setStyleSheet("""
+            QLabel {
+                font-size: 32px;
+                font-weight: bold;
+                color: #2c3e50;
+                margin: 10px 0;
+            }
+        """)
+        price_label.setAlignment(Qt.AlignCenter)
+        layout.addWidget(price_label)
+        
+        # 功能列表
+        for feature in features:
+            feature_label = QLabel(feature)
+            feature_label.setStyleSheet("""
+                QLabel {
+                    font-size: 16px;
+                    color: #7f8c8d;
+                    margin: 5px 0;
+                }
+            """)
+            layout.addWidget(feature_label)
+        
+        layout.addStretch()
+        return card
+    
     def verify_activation_code(self):
         """验证激活码"""
         logger.debug("开始验证激活码")
