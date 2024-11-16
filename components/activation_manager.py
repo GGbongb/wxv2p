@@ -164,3 +164,16 @@ class ActivationManager:
             if activation_manager.clear_activation():
                 self.update_activation_status()
                 QMessageBox.information(self, "提示", "激活信息已清除")
+
+    def clear_activation(self):
+        """清除激活信息（仅用于开发测试）"""
+        try:
+            # 删除注册表项
+            winreg.DeleteKey(winreg.HKEY_CURRENT_USER, self.registry_path)
+            # 清空当前激活信息
+            self.activation_info = None
+            logger.debug("激活信息已清除")
+            return True
+        except WindowsError as e:
+            logger.error(f"清除激活信息失败: {e}")
+            return False

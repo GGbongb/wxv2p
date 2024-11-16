@@ -28,6 +28,9 @@ class VideoDragDropWindow(QMainWindow):
 
         self.video_path = None
 
+        # 设置窗口接受键盘焦点
+        self.setFocusPolicy(Qt.StrongFocus)
+
     def init_status_bar(self):
         """初始化顶部状态栏"""
         status_layout = QHBoxLayout()
@@ -304,3 +307,25 @@ class VideoDragDropWindow(QMainWindow):
         from components.export_options_page import ExportOptionsPage
         export_page = ExportOptionsPage(self)
         self.setCentralWidget(export_page)
+
+    def keyPressEvent(self, event):
+        """处理键盘事件"""
+        print(f"按键被按下: {event.key()}, 修饰键: {event.modifiers()}")  # 调试信息
+        
+        # 按下 Ctrl+Shift+D 清除激活信息
+        if (event.modifiers() & Qt.ControlModifier and 
+            event.modifiers() & Qt.ShiftModifier and 
+            event.key() == Qt.Key_D):
+            print("检测到 Ctrl+Shift+D 组合键")  # 调试信息
+            try:
+                from components.activation_manager import ActivationManager
+                activation_manager = ActivationManager()
+                if activation_manager.clear_activation():
+                    self.update_activation_status()
+                    QMessageBox.information(self, "提示", "激活信息已清除")
+                    print("激活信息已清除")  # 调试信息
+                else:
+                    QMessageBox.warning(self, "警告", "清除激活信息失败")
+            except Exception as e:
+                print(f"发生错误: {e}")  # 调试信息
+                QMessageBox.warning(self, "错误", f"清除激活信息时发生错误: {e}")
