@@ -43,43 +43,35 @@ class PricingPlanPage(QDialog):
         # 试用版方案
         trial_plan = self.create_plan_card(
             "7天试用版",
-            "7元",
+            "🛠️ 7元",
             [
-                "✓ 7天内无限次使用",
-                "✓ 导出PDF和图片",
-                "✓ 试用结束后可升级永久版"
+                "✓ 不限次数自由使用"
             ],
-            "#3498db"  # 蓝色主题
+            "#000000"  # 黑色边框
         )
         plans_layout.addWidget(trial_plan)
-        
-        # 优惠升级方案
-        upgrade_plan = self.create_plan_card(
-            "限时优惠升级",
-            "40元",
-            [
-                "✓ 永久无限次使用",
-                "✓ 导出PDF和图片",
-                "✓ 仅限试用到期7天内",
-                "✓ 立省10元"
-            ],
-            "#e74c3c"  # 红色主题，突出优惠
-        )
-        plans_layout.addWidget(upgrade_plan)
         
         # 永久版方案
         permanent_plan = self.create_plan_card(
             "永久版",
-            "50元",
+            "🌟 50元",
             [
-                "✓ 永久无限次使用",
-                "✓ 导出PDF和图片",
-                "✓ 终身技术支持",
-                "✓ 一次付费永久拥有"
+                "✓ 一次付费，永久拥有"
             ],
-            "#27ae60"  # 绿色主题
+            "#000000"  # 黑色边框
         )
         plans_layout.addWidget(permanent_plan)
+        
+        # 优惠升级方案
+        upgrade_plan = self.create_plan_card(
+            "限时优惠",
+            "⏳ 40元",
+            [
+                "✓ 仅限试用结束7天内"
+            ],
+            "#000000"  # 黑色边框
+        )
+        plans_layout.addWidget(upgrade_plan)
         
         main_layout.addLayout(plans_layout)
         
@@ -163,27 +155,28 @@ class PricingPlanPage(QDialog):
     def create_plan_card(self, title, price, features, color):
         """创建价格方案卡片"""
         card = QFrame()
-        card.setStyleSheet(f"""
-            QFrame {{
+        card.setStyleSheet("""
+            QFrame {
                 background-color: white;
-                border: 2px solid {color};
+                border: 2px solid #000000;
                 border-radius: 15px;
-                padding: 20px;
-                min-width: 250px;
-            }}
+                padding: 30px;
+                min-width: 280px;
+            }
         """)
         
         layout = QVBoxLayout(card)
+        layout.setAlignment(Qt.AlignCenter)
         
         # 标题
         title_label = QLabel(title)
-        title_label.setStyleSheet(f"""
-            QLabel {{
-                font-size: 24px;
+        title_label.setStyleSheet("""
+            QLabel {
+                font-size: 28px;
                 font-weight: bold;
-                color: {color};
-                margin-bottom: 10px;
-            }}
+                color: #2c3e50;
+                margin-bottom: 20px;
+            }
         """)
         title_label.setAlignment(Qt.AlignCenter)
         layout.addWidget(title_label)
@@ -192,10 +185,10 @@ class PricingPlanPage(QDialog):
         price_label = QLabel(price)
         price_label.setStyleSheet("""
             QLabel {
-                font-size: 32px;
+                font-size: 38px;
                 font-weight: bold;
                 color: #2c3e50;
-                margin: 10px 0;
+                margin: 20px 0;
             }
         """)
         price_label.setAlignment(Qt.AlignCenter)
@@ -206,11 +199,12 @@ class PricingPlanPage(QDialog):
             feature_label = QLabel(feature)
             feature_label.setStyleSheet("""
                 QLabel {
-                    font-size: 16px;
-                    color: #7f8c8d;
-                    margin: 5px 0;
+                    font-size: 18px;
+                    color: #27ae60;
+                    margin: 10px 0;
                 }
             """)
+            feature_label.setAlignment(Qt.AlignCenter)
             layout.addWidget(feature_label)
         
         layout.addStretch()
