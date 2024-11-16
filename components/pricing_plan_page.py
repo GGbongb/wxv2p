@@ -69,40 +69,11 @@ class PricingPlanPage(QDialog):
         )
         plans_layout.addWidget(permanent_plan)
         
-        # 优惠升级方案
-        upgrade_plan = self.create_plan_card(
-            "限时优惠",
-            "40",
-            "元",
-            [
-                "✓ 仅限试用结束7天内"
-            ]
-        )
-        plans_layout.addWidget(upgrade_plan)
+        # 二维码卡片
+        qrcode_card = self.create_qrcode_card()
+        plans_layout.addWidget(qrcode_card)
         
         main_layout.addLayout(plans_layout)
-        
-        # 添加二维码和明
-        payment_layout = QHBoxLayout()
-        
-        # 左侧支付说明
-        payment_info = QLabel("扫描右侧二维码付款后，请联系客服获取激活码")
-        payment_info.setStyleSheet("""
-            QLabel {
-                font-size: 20px;
-                color: #7f8c8d;
-            }
-        """)
-        payment_layout.addWidget(payment_info)
-        
-        # 右侧二维码
-        qr_code_label = QLabel()
-        qr_code_path = resource_path(os.path.join("resources", "qrcode.png"))
-        qr_code_pixmap = QPixmap(qr_code_path)
-        qr_code_label.setPixmap(qr_code_pixmap.scaled(150, 150, Qt.KeepAspectRatio))
-        payment_layout.addWidget(qr_code_label)
-        
-        main_layout.addLayout(payment_layout)
         
         # 添加激活码输入区域
         activation_container = QFrame()
@@ -272,3 +243,53 @@ class PricingPlanPage(QDialog):
         self.parent().setCentralWidget(export_page)
         # 触发PDF导出
         export_page.generate_pdf()
+    
+    def create_qrcode_card(self):
+        """创建二维码卡片"""
+        card = QFrame()
+        card.setFixedWidth(400)
+        card.setMinimumHeight(350)
+        card.setStyleSheet("""
+            QFrame {
+                background-color: white;
+                border-radius: 15px;
+                padding: 40px 30px;
+            }
+            QFrame:hover {
+                background-color: #ffffff;
+                box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+            }
+        """)
+        
+        layout = QVBoxLayout(card)
+        layout.setAlignment(Qt.AlignHCenter)
+        layout.setSpacing(25)
+        layout.setContentsMargins(20, 30, 20, 30)
+        
+        # 标题
+        title_label = QLabel("扫描下方二维码\n加客服购买")
+        title_label.setStyleSheet("""
+            QLabel {
+                font-size: 32px;
+                font-weight: bold;
+                color: #2c3e50;
+                margin-bottom: 20px;
+            }
+        """)
+        title_label.setAlignment(Qt.AlignCenter)
+        title_label.setWordWrap(True)
+        layout.addWidget(title_label)
+        
+        # 二维码
+        qr_code_label = QLabel()
+        qr_code_path = resource_path(os.path.join("resources", "qrcode.png"))
+        qr_code_pixmap = QPixmap(qr_code_path)
+        scaled_pixmap = qr_code_pixmap.scaled(200, 200, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+        qr_code_label.setPixmap(scaled_pixmap)
+        qr_code_label.setAlignment(Qt.AlignCenter)
+        layout.addWidget(qr_code_label)
+        
+        # 添加底部弹性空间
+        layout.addStretch()
+        
+        return card
