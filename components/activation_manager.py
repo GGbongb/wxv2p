@@ -75,6 +75,7 @@ class ActivationManager:
                 if code_info["code"] == code:
                     logger.debug("找到匹配的激活码")
                     duration_days = {
+                        0: 7,     # 7天试用版
                         1: 30,    # 月付
                         2: 180,   # 半年付
                         3: 36500  # 永久版

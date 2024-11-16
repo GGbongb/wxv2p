@@ -38,6 +38,7 @@ class ActivationCodeGenerator:
         
         # 添加类型标识
         type_code = {
+            0: "0007",  # 7天试用版
             1: "0030",  # 月付
             2: "0180",  # 半年付
             3: "9999"   # 永久版
@@ -108,6 +109,7 @@ class ActivationCodeGenerator:
         print("save csv file")
         try:
             plan_names = {
+                0: "7天试用版",
                 1: "月付",
                 2: "半年付",
                 3: "永久版"
@@ -135,18 +137,19 @@ def main():
     
     while True:
         print("\n激活码生成工具")
+        print("0. 生成7天试用版激活码")
         print("1. 生成月付激活码")
         print("2. 生成半年付激活码")
         print("3. 生成永久版激活码")
         print("4. 批量生成激活码")
-        print("0. 退出")
+        print("5. 退出")
         
         choice = input("\n请选择操作: ")
         
-        if choice == "0":
+        if choice == "5":
             break
         
-        if choice in ["1", "2", "3"]:
+        if choice in ["0", "1", "2", "3"]:
             try:
                 code = generator.generate_code(int(choice))
                 print(f"\n生成的激活码: {code}")
