@@ -53,7 +53,7 @@ class PricingPlanPage(QDialog):
             "7",
             "元",
             [
-                "✓ 不限次数自由使用"
+                "✓ 7天内不限次数使用"
             ]
         )
         plans_layout.addWidget(trial_plan)
@@ -97,7 +97,7 @@ class PricingPlanPage(QDialog):
         self.activation_input.setPlaceholderText("请输入激活码")
         self.activation_input.setStyleSheet("""
             QLineEdit {
-                font-size: 18px;
+                font-size: 24px;
                 padding: 10px;
                 border: 2px solid #bdc3c7;
                 border-radius: 8px;
@@ -112,7 +112,7 @@ class PricingPlanPage(QDialog):
         activate_button = QPushButton("激活")
         activate_button.setStyleSheet("""
             QPushButton {
-                font-size: 18px;
+                font-size: 24px;
                 font-weight: bold;
                 color: white;
                 background-color: #3498db;
@@ -155,7 +155,7 @@ class PricingPlanPage(QDialog):
         title_label = QLabel(title)
         title_label.setStyleSheet("""
             QLabel {
-                font-size: 32px;
+                font-size: 40px;
                 font-weight: bold;
                 color: #2c3e50;
             }
@@ -180,7 +180,7 @@ class PricingPlanPage(QDialog):
         unit_label = QLabel(unit)
         unit_label.setStyleSheet("""
             QLabel {
-                font-size: 40px;
+                font-size: 45px;
                 color: #7f8c8d;
                 margin-top: 15px;
                 margin-left: 5px;
@@ -212,7 +212,7 @@ class PricingPlanPage(QDialog):
         logger.debug("开始验证激活码")
         activation_code = self.activation_input.text().strip()
         if not activation_code:
-            QMessageBox.warning(self, "提示", "请输入激活码")
+            QMessageBox.warning(self, "提示", "请输入从客服获取的激活码激活本软件")
             return
         
         # 验证激活码
