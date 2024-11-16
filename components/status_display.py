@@ -1,9 +1,96 @@
-from PyQt5.QtWidgets import QLabel, QWidget, QHBoxLayout
-from PyQt5.QtCore import Qt, QPropertyAnimation, QEasingCurve, QSequentialAnimationGroup, QParallelAnimationGroup
-from PyQt5.QtGui import QColor
+from PyQt5.QtWidgets import (QLabel, QWidget, QHBoxLayout, QVBoxLayout, QApplication,
+                           QFrame)
+from PyQt5.QtCore import Qt, QPropertyAnimation, QEasingCurve, QParallelAnimationGroup, QPoint
+from PyQt5.QtGui import QColor, QPixmap
+import os
+from tools.utils import resource_path
 import logging
 
 logger = logging.getLogger(__name__)
+
+class HoverInfoWidget(QFrame):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.init_ui()
+        self.setVisible(False)  # 初始隐藏
+        
+    def init_ui(self):
+        self.setStyleSheet("""
+            QFrame {
+                background-color: white;
+                border: 1px solid #dcdde1;
+                border-radius: 8px;
+                padding: 15px;
+            }
+        """)
+        
+        # 添加阴影效果
+        self.setGraphicsEffect(self.create_shadow())
+        
+        layout = QVBoxLayout(self)
+        layout.setSpacing(15)
+        
+        # 标题
+        title = QLabel("永久版特惠")
+        title.setStyleSheet("""
+            QLabel {
+                color: #2c3e50;
+                font-size: 24px;
+                font-weight: bold;
+            }
+        """)
+        layout.addWidget(title)
+        
+        # 价格信息
+        price_info = QLabel("限时优惠价：40元（原价50元）")
+        price_info.setStyleSheet("""
+            QLabel {
+                color: #e74c3c;
+                font-size: 18px;
+                font-weight: bold;
+            }
+        """)
+        layout.addWidget(price_info)
+        
+        # 功能描述
+        features = QLabel("✓ 一次付费，永久使用\n✓ 无限次数导出PDF和图片\n✓ 免费获取后续更新")
+        features.setStyleSheet("""
+            QLabel {
+                color: #2c3e50;
+                font-size: 16px;
+                line-height: 1.6;
+            }
+        """)
+        layout.addWidget(features)
+        
+        # 二维码
+        qr_label = QLabel()
+        qr_code_path = resource_path(os.path.join("resources", "qrcode.png"))
+        qr_pixmap = QPixmap(qr_code_path)
+        qr_pixmap = qr_pixmap.scaled(150, 150, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+        qr_label.setPixmap(qr_pixmap)
+        qr_label.setAlignment(Qt.AlignCenter)
+        layout.addWidget(qr_label)
+        
+        # 扫码说明
+        scan_hint = QLabel("扫描二维码添加客服购买")
+        scan_hint.setStyleSheet("""
+            QLabel {
+                color: #7f8c8d;
+                font-size: 14px;
+            }
+        """)
+        scan_hint.setAlignment(Qt.AlignCenter)
+        layout.addWidget(scan_hint)
+        
+    def create_shadow(self):
+        """创建阴影效果"""
+        from PyQt5.QtWidgets import QGraphicsDropShadowEffect
+        shadow = QGraphicsDropShadowEffect()
+        shadow.setBlurRadius(20)
+        shadow.setColor(QColor(0, 0, 0, 50))
+        shadow.setOffset(0, 4)
+        return shadow
 
 class AnimatedPromotionLabel(QLabel):
     def __init__(self, parent=None):
@@ -52,6 +139,13 @@ class AnimatedPromotionLabel(QLabel):
         self.animation_group.addAnimation(self.color_animation)
         self.animation_group.addAnimation(self.scale_animation)
         
+        # 添加悬浮框
+        self.hover_widget = HoverInfoWidget(parent)
+        self.hover_widget.setFixedSize(300, 400)  # 设置固定大小
+        
+        # 鼠标追踪
+        self.setMouseTracking(True)
+        
     def start_animation(self):
         """开始动画"""
         # 设置缩放动画的范围（基于文字宽度）
@@ -64,6 +158,26 @@ class AnimatedPromotionLabel(QLabel):
     def stop_animation(self):
         """停止动画"""
         self.animation_group.stop()
+        
+    def enterEvent(self, event):
+        """鼠标进入事件"""
+        # 计算悬浮框位置（在标签右侧显示）
+        pos = self.mapToGlobal(QPoint(self.width() + 10, -self.hover_widget.height() // 2))
+        # 确保不会超出屏幕
+        screen = QApplication.desktop().screenGeometry()
+        if pos.x() + self.hover_widget.width() > screen.width():
+            pos.setX(self.mapToGlobal(QPoint(-self.hover_widget.width() - 10, 0)).x())
+        if pos.y() < 0:
+            pos.setY(0)
+        elif pos.y() + self.hover_widget.height() > screen.height():
+            pos.setY(screen.height() - self.hover_widget.height())
+            
+        self.hover_widget.move(pos)
+        self.hover_widget.show()
+        
+    def leaveEvent(self, event):
+        """鼠标离开事件"""
+        self.hover_widget.hide()
 
 class StatusDisplay(QWidget):
     def __init__(self, parent=None):
