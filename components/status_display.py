@@ -198,23 +198,33 @@ class HoverInfoWidget(QWidget):
             QMessageBox.warning(self, "提示", "请输入激活码")
             return
             
-        # 使用 activate 方法而不是 verify_code
         success, message = activation_manager.activate(code)
         if success:
-            QMessageBox.information(self, "成功", message)  # 使用返回的消息
+            QMessageBox.information(self, "成功", message)
             self.hide()
             
-            # 更新状态显示
+            # 立即更新所有相关状态显示
+            # 1. 更新主窗口状态
             main_window = self.window()
             if hasattr(main_window, 'update_activation_status'):
                 main_window.update_activation_status()
                 logger.debug("主窗口激活状态已更新")
             
-            # 同时更新 StatusDisplay
+            # 2. 更新状态显示组件
             status_display = self.parent()
             if isinstance(status_display, StatusDisplay):
                 status_display.update_status(True)
+                # 强制立即更新UI
+                status_display.update()
                 logger.debug("状态显示已更新")
+                
+                # 3. 如果是永久版，确保促销信息被隐藏
+                remaining_days, _ = activation_manager.get_remaining_time()
+                if remaining_days > 3650:  # 永久版
+                    if hasattr(status_display, 'promotion_label'):
+                        status_display.promotion_label.hide()
+                        status_display.promotion_label.stop_animation()
+                        logger.debug("促销信息已隐藏")
         else:
             QMessageBox.warning(self, "错误", message)
             logger.debug(f"激活失败: {message}")
@@ -361,11 +371,15 @@ class StatusDisplay(QWidget):
         activation_manager = ActivationManager()
         remaining_days, remaining_hours = activation_manager.get_remaining_time()
         
+        logger.debug(f"更新状态显示: 已激活={is_activated}, 剩余天数={remaining_days}")
+        
         # 更新状态显示
         if is_activated:
             if remaining_days > 3650:  # 永久版
-                self.promotion_label.hide()
-                self.promotion_label.stop_animation()
+                # 确保促销标签被隐藏和停止动画
+                if hasattr(self, 'promotion_label'):
+                    self.promotion_label.hide()
+                    self.promotion_label.stop_animation()
                 status_text = "永久版"
                 style = """
                     QLabel {
@@ -376,6 +390,7 @@ class StatusDisplay(QWidget):
                         border-radius: 4px;
                     }
                 """
+                logger.debug("已设置为永久版状态")
             elif remaining_days == 7 or (remaining_days == 6 and remaining_hours > 0):  # 7天体验期
                 self.promotion_label.show()
                 self.promotion_label.setText("限时折扣：7天体验期内购买永久版可享受10元优惠，仅需40元")
@@ -419,3 +434,8 @@ class StatusDisplay(QWidget):
             
         self.activation_label.setText(status_text)
         self.activation_label.setStyleSheet(style)
+        
+        # 强制更新UI
+        self.activation_label.update()
+        self.update()
+        logger.debug("UI已更新")

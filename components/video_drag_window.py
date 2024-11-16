@@ -52,8 +52,14 @@ class VideoDragDropWindow(QMainWindow):
         activation_manager = ActivationManager()
         
         is_activated = activation_manager.is_activated()
-        # 不再需要传递remaining_days参数，因为StatusDisplay会自己获取详细时间
+        # 确保状态栏可见
+        self.status_display.show()
+        # 更新状态
         self.status_display.update_status(is_activated)
+        # 强制更新UI
+        self.status_display.update()
+        self.update()
+        logger.debug(f"状态已更新: 激活状态={is_activated}")
 
     def init_drag_drop_ui(self):
         # 创建一个容器用于文字显示
@@ -236,9 +242,16 @@ class VideoDragDropWindow(QMainWindow):
             self.setCentralWidget(export_page)
             logger.debug("设置 centralWidget 成功")
             
+            # 确保状态栏可见
+            self.status_display.show()
+            
             # 更新激活状态
             self.update_activation_status()
             logger.debug("更新激活状态显示")
+            
+            # 强制更新UI
+            self.status_display.update()
+            self.update()
             
             # 确保窗口保持显示
             self.show()
