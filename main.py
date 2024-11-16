@@ -24,10 +24,10 @@ def create_desktop_shortcut():
             app_path = sys.executable
         else:
             # 开发环境路径
-            app_path = os.path.abspath("dist/微信聊天记录录屏转图片.exe")
+            app_path = os.path.abspath("dist/WX聊天录屏转图片.exe")
         
         # 快捷方式路径
-        shortcut_path = os.path.join(desktop_path, "微信聊天录屏转图片.lnk")
+        shortcut_path = os.path.join(desktop_path, "WX聊天录屏转图片.lnk")
         
         # 如果快捷方式不存在，则创建
         if not os.path.exists(shortcut_path):

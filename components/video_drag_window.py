@@ -122,6 +122,21 @@ class VideoDragDropWindow(QMainWindow):
             }
         """)
         text_layout.addWidget(self.drop_area)
+
+            # 添加提示信息
+    # 添加提示信息
+        self.drop_hint = QLabel("注意：\n1. 微信聊天录屏时，速度应缓慢，否则导出效果不好；\n2. 录屏时应当从上往下翻进行录屏", self)
+        self.drop_hint.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)  # 设置为靠左对齐
+        self.drop_hint.setStyleSheet("""
+            QLabel {
+                color: #95a5a6;
+                font-size: 36px;
+                line-height: 3;  /* 调整行间距 */
+                margin-top: 30px;  /* 增加顶部间距 */
+            }
+        """)
+
+        text_layout.addWidget(self.drop_hint)
         
         # 添加文字和按钮之间的空白
         text_layout.addStretch(3)

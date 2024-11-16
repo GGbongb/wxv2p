@@ -62,7 +62,7 @@ exe = EXE(
     a.datas,
     binaries,
     [],
-    name='微信聊天记录录屏转图片',
+    name='微信聊天录屏转图片工具',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
