@@ -1,14 +1,12 @@
 import hashlib
-import time
 import json
 import os
 import base64
 from datetime import datetime, timedelta
-import sys
 import logging
 import winreg
 from tools.utils import resource_path
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QSizePolicy,QMessageBox
+from PyQt5.QtWidgets import QMessageBox
 from PyQt5.QtCore import Qt
 
 logger = logging.getLogger(__name__)

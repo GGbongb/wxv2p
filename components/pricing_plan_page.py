@@ -19,7 +19,7 @@ class PricingPlanPage(QDialog):
         
     def init_ui(self):
         # 设置背景色
-        self.setStyleSheet("background-color: #f5f6fa;")
+        #self.setStyleSheet("background-color: #f5f6fa;")
         
         # 创建主布局
         main_layout = QVBoxLayout(self)
