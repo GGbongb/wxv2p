@@ -158,7 +158,7 @@ def main():
                 
         elif choice == "4":
             try:
-                plan_type = int(input("请选择计划类型(1=月付, 2=半年付, 3=永久版): "))
+                plan_type = int(input("请选择计划类型(0=7天试用版, 1=月付, 2=半年付, 3=永久版): "))
                 count = int(input("请输入需要生成的数量: "))
                 
                 print("\n生成的激活码:")
