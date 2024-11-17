@@ -189,7 +189,7 @@ class HoverInfoWidget(QWidget):
         return shadow
 
     def activate_code(self):
-        """激活码验证处理"""
+        logger.debug("开始激活码验证流程")
         from components.activation_manager import ActivationManager
         activation_manager = ActivationManager()
         
@@ -199,15 +199,20 @@ class HoverInfoWidget(QWidget):
             return
             
         success, message = activation_manager.activate(code)
+        logger.debug(f"激活结果: success={success}, message={message}")
+        
         if success:
             QMessageBox.information(self, "成功", message)
             self.hide()
             
             # 获取主窗口并更新状态
             main_window = self.window()
-            if isinstance(main_window, QMainWindow):  # 确保是主窗口
+            logger.debug(f"获取到主窗口: {main_window}")
+            
+            if isinstance(main_window, QMainWindow):
+                logger.debug("开始调用主窗口的update_activation_status")
                 main_window.update_activation_status()
-                logger.debug("主窗口激活状态已更新")
+                logger.debug("主窗口update_activation_status调用完成")
         else:
             QMessageBox.warning(self, "错误", message)
             logger.debug(f"激活失败: {message}")
@@ -350,6 +355,8 @@ class StatusDisplay(QWidget):
         
     def update_status(self, is_activated):
         """更新状态显示"""
+        logger.debug(f"StatusDisplay.update_status 被调用: is_activated={is_activated}")
+ 
         from components.activation_manager import ActivationManager
         activation_manager = ActivationManager()
         remaining_days, remaining_hours = activation_manager.get_remaining_time()
@@ -421,4 +428,4 @@ class StatusDisplay(QWidget):
         # 强制更新UI
         self.activation_label.update()
         self.update()
-        logger.debug("UI已更新")
+        logger.debug(f"状态显示已更新: {status_text}")

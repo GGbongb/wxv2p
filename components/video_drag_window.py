@@ -51,13 +51,15 @@ class VideoDragDropWindow(QMainWindow):
         self.setFocusPolicy(Qt.StrongFocus)
 
     def update_activation_status(self):
-        """更新激活状态显示"""
+        logger.debug("VideoDragDropWindow.update_activation_status 被调用")
         from components.activation_manager import ActivationManager
         activation_manager = ActivationManager()
         
         is_activated = activation_manager.is_activated()
+        logger.debug(f"获取到激活状态: {is_activated}")
+        
         self.status_display.update_status(is_activated)
-        logger.debug(f"状态已更新: 激活状态={is_activated}")
+        logger.debug("状态显示更新完成")
 
     def init_drag_drop_ui(self):
         # 创建一个容器用于文字显示

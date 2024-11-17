@@ -61,7 +61,7 @@ class ActivationManager:
             logger.debug("开始读取加密文件")
             with open(self.encrypted_codes_file, 'rb') as f:
                 encrypted_data = f.read()
-                logger.debug("���功读取加密数据")
+                logger.debug("成功读取加密数据")
                 
                 decrypted_data = self.decrypt_data(encrypted_data)
                 logger.debug("成功解密数据")
@@ -101,8 +101,7 @@ class ActivationManager:
         return ''.join(decrypted)
     
     def activate(self, code):
-        """激活软件"""
-        logger.debug(f"尝试激活软件，激活码: {code}")
+        logger.debug(f"ActivationManager.activate 被调用，激活码: {code}")
         is_valid, message, duration_days = self.verify_code(code)
         
         if not is_valid:
