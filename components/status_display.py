@@ -85,7 +85,7 @@ class HoverInfoWidget(QWidget):
         features.setStyleSheet("""
             QLabel {
                 color: #2c3e50;
-                font-size: 18px;
+                font-size: 20px;
                 line-height: 1.8;
             }
         """)
@@ -338,7 +338,7 @@ class StatusDisplay(QWidget):
         self.version_label.setStyleSheet("""
             QLabel {
                 color: #7f8c8d;
-                font-size: 14px;
+                font-size: 24px;
                 padding: 5px;
             }
         """)
@@ -350,7 +350,7 @@ class StatusDisplay(QWidget):
         self.activation_label = QLabel()
         self.activation_label.setStyleSheet("""
             QLabel {
-                font-size: 16px;
+                font-size: 24px;
                 padding: 5px 10px;
                 border-radius: 4px;
             }
@@ -383,7 +383,7 @@ class StatusDisplay(QWidget):
                 style = """
                     QLabel {
                         color: #27ae60;
-                        font-size: 16px;
+                        font-size: 24px;
                         padding: 5px 10px;
                         background-color: #e8f5e9;
                         border-radius: 4px;
@@ -398,7 +398,7 @@ class StatusDisplay(QWidget):
                 style = """
                     QLabel {
                         color: #e67e22;
-                        font-size: 16px;
+                        font-size: 24px;
                         padding: 5px 10px;
                         background-color: #ffeaa7;
                         border-radius: 4px;
@@ -411,7 +411,7 @@ class StatusDisplay(QWidget):
                 style = """
                     QLabel {
                         color: #27ae60;
-                        font-size: 16px;
+                        font-size: 24px;
                         padding: 5px 10px;
                         background-color: #e8f5e9;
                         border-radius: 4px;
@@ -424,7 +424,7 @@ class StatusDisplay(QWidget):
             style = """
                 QLabel {
                     color: #c0392b;
-                    font-size: 16px;
+                    font-size: 24px;
                     padding: 5px 10px;
                     background-color: #ffebee;
                     border-radius: 4px;
