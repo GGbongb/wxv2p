@@ -221,14 +221,19 @@ class HoverInfoWidget(QWidget):
             QMessageBox.warning(self, "错误", message)
             logger.debug(f"激活失败: {message}")
 
-    def enterEvent(self, event):
-        """鼠标进入悬浮框"""
-        # 保持显示状态
-        self.show()
-        
     def leaveEvent(self, event):
         """鼠标离开悬浮框"""
-        self.hide()
+        # 获取鼠标当前位置
+        mouse_pos = QCursor.pos()
+        
+        # 检查鼠标是否在悬浮框内
+        widget_rect = self.geometry()
+        global_rect = QRect(self.mapToGlobal(widget_rect.topLeft()),
+                          self.mapToGlobal(widget_rect.bottomRight()))
+        
+        if not global_rect.contains(mouse_pos):
+            self.hide()
+            logger.debug("鼠标离开悬浮框区域，隐藏悬浮框")
 
 class AnimatedPromotionLabel(QLabel):
     def __init__(self, parent=None):
@@ -277,14 +282,10 @@ class AnimatedPromotionLabel(QLabel):
         self.animation_group.addAnimation(self.color_animation)
         self.animation_group.addAnimation(self.scale_animation)
         
-        # 添加悬浮框，并设置正确的父窗口关系
+        # 添加悬浮框
         self.hover_widget = HoverInfoWidget()
-        self.hover_widget.setParent(self.window())  # 设置为主窗口的子窗口
         self.hover_widget.setWindowFlags(Qt.FramelessWindowHint | Qt.ToolTip)
         self.hover_widget.setAttribute(Qt.WA_TranslucentBackground)
-        
-        # 保存对主窗口的引用
-        self.main_window = self.window()
         
         # 设置鼠标追踪
         self.setMouseTracking(True)
@@ -303,7 +304,7 @@ class AnimatedPromotionLabel(QLabel):
         self.animation_group.stop()
         
     def enterEvent(self, event):
-        """鼠标进入事件"""
+        """鼠标进入标签"""
         # 计算悬浮框位置（在标签正下方显示）
         pos = self.mapToGlobal(QPoint(0, self.height() + 5))
         
@@ -312,9 +313,10 @@ class AnimatedPromotionLabel(QLabel):
         
         self.hover_widget.move(pos)
         self.hover_widget.show()
+        logger.debug("鼠标进入促销标签，显示悬浮框")
         
     def leaveEvent(self, event):
-        """鼠标离开事件"""
+        """鼠标离开标签"""
         # 获取鼠标当前位置
         mouse_pos = QCursor.pos()
         
@@ -323,6 +325,7 @@ class AnimatedPromotionLabel(QLabel):
         
         if not hover_widget_rect.contains(mouse_pos):
             self.hover_widget.hide()
+            logger.debug("鼠标离开促销标签且不在悬浮框内，隐藏悬浮框")
 
 class StatusDisplay(QWidget):
     def __init__(self, parent=None):
