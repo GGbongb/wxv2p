@@ -189,6 +189,7 @@ class HoverInfoWidget(QWidget):
         return shadow
 
     def activate_code(self):
+        """激活码验证处理"""
         logger.debug("开始激活码验证流程")
         from components.activation_manager import ActivationManager
         activation_manager = ActivationManager()
@@ -205,14 +206,17 @@ class HoverInfoWidget(QWidget):
             QMessageBox.information(self, "成功", message)
             self.hide()
             
-            # 获取主窗口并更新状态
-            main_window = self.window()
-            logger.debug(f"获取到主窗口: {main_window}")
-            
-            if isinstance(main_window, QMainWindow):
-                logger.debug("开始调用主窗口的update_activation_status")
-                main_window.update_activation_status()
-                logger.debug("主窗口update_activation_status调用完成")
+            # 通过父级组件找到主窗口
+            parent = self.parent()
+            while parent is not None:
+                if isinstance(parent, QMainWindow):
+                    logger.debug(f"找到主窗口: {parent}")
+                    parent.update_activation_status()
+                    break
+                parent = parent.parent()
+                
+            if parent is None:
+                logger.error("未找到主窗口")
         else:
             QMessageBox.warning(self, "错误", message)
             logger.debug(f"激活失败: {message}")
@@ -273,11 +277,16 @@ class AnimatedPromotionLabel(QLabel):
         self.animation_group.addAnimation(self.color_animation)
         self.animation_group.addAnimation(self.scale_animation)
         
-        # 添加悬浮框，增加尺寸
-        self.hover_widget = HoverInfoWidget(parent)
-        self.hover_widget.setFixedSize(400, 600)
+        # 添加悬浮框，并设置正确的父窗口关系
+        self.hover_widget = HoverInfoWidget()
+        self.hover_widget.setParent(self.window())  # 设置为主窗口的子窗口
+        self.hover_widget.setWindowFlags(Qt.FramelessWindowHint | Qt.ToolTip)
+        self.hover_widget.setAttribute(Qt.WA_TranslucentBackground)
         
-        # 鼠标追踪
+        # 保存对主窗口的引用
+        self.main_window = self.window()
+        
+        # 设置鼠标追踪
         self.setMouseTracking(True)
         
     def start_animation(self):
