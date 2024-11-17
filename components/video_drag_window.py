@@ -16,35 +16,39 @@ class VideoDragDropWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("微信聊天记录转图片工具")
-        self.setGeometry(100, 100, 1920,1500)
+        self.setGeometry(100, 100, 1920, 1500)
 
+        # 创建中央部件
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
-        self.layout = QVBoxLayout(self.central_widget)
-
-        # 添加顶部状态栏
-        self.init_status_bar()
-
-        # 初始化后立即更新激活状态
-        self.update_activation_status()  # 添加这行
         
-        self.init_drag_drop_ui()
-
-        self.video_path = None
-
-        # 设置窗口接受键盘焦点
-        self.setFocusPolicy(Qt.StrongFocus)
-
-    def init_status_bar(self):
-        """初始化顶部状态栏"""
-        self.status_display = StatusDisplay()
-        self.layout.addWidget(self.status_display)
+        # 创建主布局
+        self.main_layout = QVBoxLayout(self.central_widget)
+        self.main_layout.setContentsMargins(0, 0, 0, 0)
+        
+        # 添加状态栏（作为主窗口的一部分）
+        self.status_display = StatusDisplay(self)
+        self.main_layout.addWidget(self.status_display)
         
         # 添加分隔线
         separator = QFrame()
         separator.setFrameShape(QFrame.HLine)
         separator.setStyleSheet("background-color: #bdc3c7;")
-        self.layout.addWidget(separator)
+        self.main_layout.addWidget(separator)
+        
+        # 创建内容区域的容器
+        self.content_widget = QWidget()
+        self.content_layout = QVBoxLayout(self.content_widget)
+        self.main_layout.addWidget(self.content_widget)
+        
+        # 初始化拖放界面
+        self.init_drag_drop_ui()
+        
+        # 初始化后立即更新激活状态
+        self.update_activation_status()
+        
+        self.video_path = None
+        self.setFocusPolicy(Qt.StrongFocus)
 
     def update_activation_status(self):
         """更新激活状态显示"""
@@ -52,13 +56,7 @@ class VideoDragDropWindow(QMainWindow):
         activation_manager = ActivationManager()
         
         is_activated = activation_manager.is_activated()
-        # 确保状态栏可见
-        self.status_display.show()
-        # 更新状态
         self.status_display.update_status(is_activated)
-        # 强制更新UI
-        self.status_display.update()
-        self.update()
         logger.debug(f"状态已更新: 激活状态={is_activated}")
 
     def init_drag_drop_ui(self):
@@ -135,7 +133,7 @@ class VideoDragDropWindow(QMainWindow):
         text_layout.addStretch(4)
         
         # 将容器添加到主布局
-        self.layout.addWidget(self.text_container)
+        self.content_layout.addWidget(self.text_container)
         
         self.setAcceptDrops(True)
 
@@ -172,31 +170,23 @@ class VideoDragDropWindow(QMainWindow):
             return
         
         logger.debug(f"开始处理视频: {self.video_path}")
-
-        # 隐藏激活状态标签
-        self.status_display.hide()  # 添加这一行
-        # Clear the layout
-        for i in reversed(range(self.layout.count())): 
-            widget = self.layout.itemAt(i).widget()
-            if widget:
-                logger.debug(f"移除控件: {widget}")
-                widget.setParent(None)
-            else:
-                logger.debug("没有找到控件")   
-        self.layout.update()
-                  
-        logger.debug(f"准备展示进度条")
         
-    # 创建一个新的布局来居中进度条
+        # 清空内容区域而不是整个布局
+        for i in reversed(range(self.content_layout.count())): 
+            widget = self.content_layout.itemAt(i).widget()
+            if widget:
+                widget.setParent(None)
+                
+        # 添加进度条到内容区域
         progress_layout = QVBoxLayout()
-        progress_layout.addStretch(1)  # 添加弹性空间以居中
+        progress_layout.addStretch(1)
         self.progress_bar = FunProgressBar(self)
         progress_layout.addWidget(self.progress_bar)
-        progress_layout.addStretch(1)  # 添加弹性空间以居中
-
-        # 将进度条布局添加到主布局
-        self.layout.addLayout(progress_layout)
-
+        progress_layout.addStretch(1)
+        self.content_layout.addLayout(progress_layout)
+        
+        logger.debug(f"准备展示进度条")
+        
         self.animation = QPropertyAnimation(self.progress_bar, b"value")
         self.animation.setDuration(1000)
         self.animation.setStartValue(0)

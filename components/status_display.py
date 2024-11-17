@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import (QLabel, QWidget, QHBoxLayout, QVBoxLayout, 
-                           QFrame, QLineEdit, QPushButton, QMessageBox)
+                           QFrame, QLineEdit, QPushButton, QMessageBox, QMainWindow)
 from PyQt5.QtCore import Qt, QPropertyAnimation, QEasingCurve, QParallelAnimationGroup, QPoint, QRect
 from PyQt5.QtGui import QColor, QPixmap, QCursor
 import os
@@ -203,28 +203,11 @@ class HoverInfoWidget(QWidget):
             QMessageBox.information(self, "成功", message)
             self.hide()
             
-            # 立即更新所有相关状态显示
-            # 1. 更新主窗口状态
+            # 获取主窗口并更新状态
             main_window = self.window()
-            if hasattr(main_window, 'update_activation_status'):
+            if isinstance(main_window, QMainWindow):  # 确保是主窗口
                 main_window.update_activation_status()
                 logger.debug("主窗口激活状态已更新")
-            
-            # 2. 更新状态显示组件
-            status_display = self.parent()
-            if isinstance(status_display, StatusDisplay):
-                status_display.update_status(True)
-                # 强制立即更新UI
-                status_display.update()
-                logger.debug("状态显示已更新")
-                
-                # 3. 如果是永久版，确保促销信息被隐藏
-                remaining_days, _ = activation_manager.get_remaining_time()
-                if remaining_days > 3650:  # 永久版
-                    if hasattr(status_display, 'promotion_label'):
-                        status_display.promotion_label.hide()
-                        status_display.promotion_label.stop_animation()
-                        logger.debug("促销信息已隐藏")
         else:
             QMessageBox.warning(self, "错误", message)
             logger.debug(f"激活失败: {message}")
