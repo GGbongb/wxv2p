@@ -198,12 +198,19 @@ class HoverInfoWidget(QWidget):
         if not code:
             QMessageBox.warning(self, "提示", "请输入激活码")
             return
+        
+        # 检查当前激活状态
+        current_info = activation_manager.activation_info
+        if current_info and current_info.get('type') == 3:  # 已经是永久版
+            QMessageBox.warning(self, "提示", "当前已是永久版，无需重复激活")
+            return
             
         success, message = activation_manager.activate(code)
         logger.debug(f"激活结果: success={success}, message={message}")
         
         if success:
             QMessageBox.information(self, "成功", message)
+            
             # 更新主窗口状态
             main_window = self.parent()
             while main_window and not isinstance(main_window, QMainWindow):
@@ -211,9 +218,12 @@ class HoverInfoWidget(QWidget):
                 
             if main_window:
                 main_window.update_activation_status()
-                
-            # 隐藏悬浮框
-            self.hide()
+                # 如果是永久版激活成功，隐藏促销标签
+                if activation_manager.activation_info.get('type') == 3:
+                    self.parent().hide()  # 隐藏促销标签
+                    self.hide()  # 隐藏悬浮框
+            else:
+                self.hide()  # 如果找不到主窗口，至少隐藏悬浮框
         else:
             QMessageBox.warning(self, "错误", message)
 
