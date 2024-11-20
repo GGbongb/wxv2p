@@ -204,22 +204,18 @@ class HoverInfoWidget(QWidget):
         
         if success:
             QMessageBox.information(self, "成功", message)
-            self.hide()
-            
-            # 通过父级组件找到主窗口
-            parent = self.parent()
-            while parent is not None:
-                if isinstance(parent, QMainWindow):
-                    logger.debug(f"找到主窗口: {parent}")
-                    parent.update_activation_status()
-                    break
-                parent = parent.parent()
+            # 更新主窗口状态
+            main_window = self.parent()
+            while main_window and not isinstance(main_window, QMainWindow):
+                main_window = main_window.parent()
                 
-            if parent is None:
-                logger.error("未找到主窗口")
+            if main_window:
+                main_window.update_activation_status()
+                
+            # 隐藏悬浮框
+            self.hide()
         else:
             QMessageBox.warning(self, "错误", message)
-            logger.debug(f"激活失败: {message}")
 
     def leaveEvent(self, event):
         """鼠标离开悬浮框"""
