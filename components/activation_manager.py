@@ -8,6 +8,10 @@ import winreg
 from tools.utils import resource_path
 from PyQt5.QtWidgets import QMessageBox
 from PyQt5.QtCore import Qt
+from .network_manager import NetworkManager
+from .activation_dialog import ActivationDialog
+from PyQt5.QtWidgets import QApplication
+import asyncio
 
 logger = logging.getLogger(__name__)
 
@@ -17,6 +21,7 @@ class ActivationManager:
         self.encrypted_codes_file = resource_path("data/encrypted_codes.dat")
         self.secret_key = "your_secret_key_here"
         self.registry_path = r"Software\WxV2P"
+        self.network_manager = NetworkManager()
         self.activation_info = self.load_activation_info()
     
     def load_activation_info(self):
@@ -44,105 +49,42 @@ class ActivationManager:
         except Exception as e:
             logger.error(f"保存激活信息失败: {e}")
     
-    def verify_code(self, code):
-        """验证激活码"""
-        logger.debug(f"开始验证激活码: {code}")
-        
-        if not code or len(code) != 9:
-            logger.warning(f"无效的激活码格式，长度为: {len(code) if code else 0}")
-            return False, "无效的激活码格式", 0
-            
-        try:
-            # 读取加密的激活码数据
-            if not os.path.exists(self.encrypted_codes_file):
-                logger.error(f"找不到加密文件: {self.encrypted_codes_file}")
-                return False, "激活码验证失败", 0
-            
-            logger.debug("开始读取加密文件")
-            with open(self.encrypted_codes_file, 'rb') as f:
-                encrypted_data = f.read()
-                logger.debug("成功读取加密数据")
-                
-                decrypted_data = self.decrypt_data(encrypted_data)
-                logger.debug("成功解密数据")
-                
-                valid_codes = json.loads(decrypted_data)
-                logger.debug(f"解析到的有效激活码数量: {len(valid_codes)}")
-            
-            # 查找匹配的激活码
-            for code_info in valid_codes:
-                logger.debug(f"检查激活码: {code_info['code']}")
-                if code_info["code"] == code:
-                    logger.debug("找到匹配的激活码")
-                    duration_days = {
-                        0: 7,     # 7天试用版
-                        1: 30,    # 月付
-                        2: 180,   # 半年付
-                        3: 36500  # 永久版
-                    }.get(code_info["type"], 0)
-                    
-                    return True, "激活成功", duration_days
-            
-            logger.warning("未找到匹配的激活码")
-            return False, "无效的激活码", 0
-            
-        except Exception as e:
-            logger.error(f"验证过程中发生错误: {str(e)}", exc_info=True)
-            return False, f"激活码验证失败: {str(e)}", 0
-    
-    def decrypt_data(self, encrypted_data):
-        """解密数据"""
-        key = hashlib.sha256(self.secret_key.encode()).digest()
-        encrypted = base64.b64decode(encrypted_data).decode()
-        decrypted = []
-        for i, c in enumerate(encrypted):
-            key_c = key[i % len(key)]
-            decrypted.append(chr((256 + ord(c) - key_c) % 256))
-        return ''.join(decrypted)
-    
     def activate(self, code):
-        logger.debug(f"ActivationManager.activate 被调用，激活码: {code}")
-        is_valid, message, duration_days = self.verify_code(code)
+        """激活软件"""
+        logger.debug(f"开始激活，激活码: {code}")
         
-        if not is_valid:
-            logger.warning(f"激活失败: {message}")
-            return False, message
+        # 创建并显示进度对话框
+        dialog = ActivationDialog(QApplication.activeWindow())
+        dialog.show()
+        QApplication.processEvents()
         
         try:
-            # 检查是否已经激活
-            if self.is_activated():
-                current_duration = self.activation_info.get("duration_days", 0)
-                logger.debug(f"当前激活期限: {current_duration}天")
-                
-                # 如果当前是更长期限的版本，不允许降级
-                if current_duration > duration_days:
-                    logger.warning("当前已激活更高级的版本，不允许降级")
-                    return False, "当前已激活更高级的版本，无需重复激活"
-                # 如果是永久版，允许覆盖任何版本
-                elif duration_days > 3650:
-                    logger.debug("升级到永久版")
-                # 如果新版本期限更短，不允许激活
-                elif current_duration > 0 and duration_days <= current_duration:
-                    logger.warning("不允许激活更低级的版本")
-                    return False, "当前版本已激活，无需重复激活"
+            # 验证激活码
+            success, message, data = self.network_manager.activate_code(code)
+            
+            if not success:
+                dialog.close()
+                return False, message
             
             # 创建激活信息
             activation_info = {
                 "code": code,
-                "activation_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "expiry_date": (datetime.now() + timedelta(days=duration_days)).strftime("%Y-%m-%d %H:%M:%S"),
-                "duration_days": duration_days
+                "activation_date": data["activation_date"],
+                "expiry_date": data["expiry_date"],
+                "duration_days": data["duration_days"],
+                "type": data["type"]
             }
             
             # 保存激活信息
             self.activation_info = activation_info
             self.save_activation_info(activation_info)
-            logger.debug("激活信息已成功保存到注册表")
             
-            return True, "激活成功" if duration_days <= 3650 else "成功升级到永久版"
+            dialog.close()
+            return True, message
             
         except Exception as e:
             logger.error(f"激活过程中发生错误: {str(e)}", exc_info=True)
+            dialog.close()
             return False, f"激活失败: {str(e)}"
     
     def is_activated(self):
