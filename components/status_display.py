@@ -191,27 +191,30 @@ class HoverInfoWidget(QWidget):
     def activate_code(self):
         """激活码验证处理"""
         logger.debug("开始激活码验证流程")
+        from components.activation_manager import ActivationManager
+        activation_manager = ActivationManager()
         
-        # 查找主窗口
-        from components.video_drag_window import VideoDragDropWindow
-        main_window = None
-        parent_widget = self
+        code = self.activation_input.text().strip()
+        if not code:
+            QMessageBox.warning(self, "提示", "请输入激活码")
+            return
+            
+        success, message = activation_manager.activate(code)
+        logger.debug(f"激活结果: success={success}, message={message}")
         
-        logger.debug(f"HoverInfoWidget 的直接父级: {type(self.parent())}")
-        
-        while parent_widget:
-            logger.debug(f"查找主窗口，当前组件: {type(parent_widget)}")
-            if isinstance(parent_widget, VideoDragDropWindow):
-                main_window = parent_widget
-                break
-            parent_widget = parent_widget.parent()
-        
-        if main_window:
-            logger.debug("找到主窗口，准备更新状态")
-            main_window.update_activation_status()
-            self.hide()
+        if success:
+            QMessageBox.information(self, "成功", message)
+            
+            # 直接使用保存的主窗口引用
+            if hasattr(self, 'main_window'):
+                logger.debug("找到主窗口引用，开始更新状态")
+                self.main_window.update_activation_status()
+                self.hide()
+            else:
+                logger.error("未找到主窗口引用")
+                
         else:
-            logger.error("激活时未找到主窗口")
+            QMessageBox.warning(self, "错误", message)
 
     def leaveEvent(self, event):
         """鼠标离开悬浮框"""
@@ -232,6 +235,28 @@ class AnimatedPromotionLabel(QLabel):
         super().__init__(parent)
         logger.debug(f"AnimatedPromotionLabel 初始化, parent={parent}")
         
+        # 先找到主窗口
+        from components.video_drag_window import VideoDragDropWindow
+        self.main_window = None
+        parent_widget = self
+        
+        while parent_widget:
+            logger.debug(f"查找主窗口，当前组件: {type(parent_widget)}")
+            if isinstance(parent_widget, VideoDragDropWindow):
+                self.main_window = parent_widget
+                break
+            parent_widget = parent_widget.parent()
+            
+        if self.main_window:
+            logger.debug("成功找到主窗口")
+            # 创建悬浮框并设置主窗口为父级
+            self.hover_widget = HoverInfoWidget()
+            self.hover_widget.setParent(self.main_window)
+            # 保存主窗口引用
+            self.hover_widget.main_window = self.main_window
+        else:
+            logger.error("初始化时未找到主窗口")
+            
         self.setStyleSheet("""
             QLabel {
                 color: #e74c3c;
@@ -275,25 +300,6 @@ class AnimatedPromotionLabel(QLabel):
         # 将两个动画添加到动画组
         self.animation_group.addAnimation(self.color_animation)
         self.animation_group.addAnimation(self.scale_animation)
-        
-        # 查找主窗口并创建悬浮框
-        from components.video_drag_window import VideoDragDropWindow
-        main_window = None
-        parent_widget = self
-        
-        while parent_widget:
-            logger.debug(f"当前父级组件: {type(parent_widget)}")
-            if isinstance(parent_widget, VideoDragDropWindow):
-                main_window = parent_widget
-                break
-            parent_widget = parent_widget.parent()
-        
-        if main_window:
-            logger.debug("成功找到主窗口，创建悬浮框")
-        else:
-            logger.error("在初始化时未找到主窗口")
-            
-        self.hover_widget = HoverInfoWidget(main_window)
         
         # 设置鼠标追踪
         self.setMouseTracking(True)
