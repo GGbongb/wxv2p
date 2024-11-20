@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 
 class NetworkManager:
     def __init__(self):
-        self.api_url = "https://your-api-url.com"  # 替换为您的API地址
+        self.api_url = "https://1327404351-cmjqnh22uo.ap-chengdu.tencentscf.com"  # 替换为您的API地址
         self.timeout = 10  # 请求超时时间（秒）
         
     def check_network(self) -> bool:

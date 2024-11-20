@@ -11,7 +11,6 @@ copyright = 'Copyright (C) 2024 李洋'
 added_files = [
     # 添加资源文件
     ('resources/*.png', 'resources'),  # 所有PNG图片
-    ('data/encrypted_codes.dat', 'data'),  # 只打包加密的激活码文件
     ('resources/icon.ico', 'resources'),  # 添加图标文件
 ]
 
