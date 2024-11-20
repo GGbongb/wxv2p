@@ -69,7 +69,7 @@ class ActivationManager:
             # 创建激活信息
             activation_info = {
                 "code": code,
-                "activation_date": data["activation_date"],
+                "activation_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),  # 使用当前时间
                 "expiry_date": data["expiry_date"],
                 "duration_days": data["duration_days"],
                 "type": data["type"]
