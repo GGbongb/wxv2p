@@ -203,16 +203,18 @@ class HoverInfoWidget(QWidget):
         logger.debug(f"激活结果: success={success}, message={message}")
         
         if success:
-            QMessageBox.information(self, "成功", message)
-            
-            # 直接使用保存的主窗口引用
+            # 先更新状态
             if hasattr(self, 'main_window'):
                 logger.debug("找到主窗口引用，开始更新状态")
                 self.main_window.update_activation_status()
-                self.hide()
-            else:
-                logger.error("未找到主窗口引用")
                 
+            # 然后显示成功消息
+            QMessageBox.information(self, "成功", message)
+            
+            # 最后安全地隐藏悬浮框
+            self.setVisible(False)
+            logger.debug("悬浮框已隐藏")
+            
         else:
             QMessageBox.warning(self, "错误", message)
 
@@ -314,24 +316,16 @@ class AnimatedPromotionLabel(QLabel):
         self.animation.setEndValue(end_pos)
         
         # 设置动画完成后的回调
-        self.animation.finished.connect(self._reverse_animation)
+        #self.animation.finished.connect(self._reverse_animation)
         
         # 开始动画
-        self.animation.start()
-        
-    def _reverse_animation(self):
-        """反向动画"""
-        current_pos = self.pos()
-        self.animation.setStartValue(current_pos)
-        start_pos = current_pos - QPoint(10, 0)  # 向左移动回原位置
-        self.animation.setEndValue(start_pos)
         self.animation.start()
         
     def stop_animation(self):
         """停止动画"""
         logger.debug("停止促销标签动画")
         if self.animation.state() == QPropertyAnimation.Running:
-            self.animation.stop()
+                self.animation.stop()
 
 class StatusDisplay(QWidget):
     def __init__(self, parent=None):
