@@ -204,18 +204,25 @@ class HoverInfoWidget(QWidget):
         
         if success:
             QMessageBox.information(self, "成功", message)
-            # 更新主窗口状态
-            main_window = self.parent()
-            while main_window and not isinstance(main_window, QMainWindow):
-                main_window = main_window.parent()
-                
-            if main_window:
-                main_window.update_activation_status()
-                
-            # 隐藏悬浮框
             self.hide()
+            
+            # 通过父级组件找到主窗口
+            parent = self.parent()
+            while parent is not None:
+                if isinstance(parent, QMainWindow):
+                    logger.debug(f"找到主窗口: {parent}")
+                    parent.update_activation_status()
+                    break
+                parent = parent.parent()
+                
+            if parent is None:
+                logger.error("未找到主窗口")
+
+
+
         else:
             QMessageBox.warning(self, "错误", message)
+            logger.debug(f"激活失败: {message}")
 
     def leaveEvent(self, event):
         """鼠标离开悬浮框"""
@@ -364,7 +371,7 @@ class StatusDisplay(QWidget):
     def update_status(self, is_activated):
         """更新状态显示"""
         logger.debug(f"StatusDisplay.update_status 被调用: is_activated={is_activated}")
- 
+
         from components.activation_manager import ActivationManager
         activation_manager = ActivationManager()
         remaining_days, remaining_hours = activation_manager.get_remaining_time()
@@ -373,7 +380,7 @@ class StatusDisplay(QWidget):
         
         # 更新状态显示
         if is_activated:
-            if remaining_days > 3650:  # 永久版
+            if remaining_days >= 3650:  # 永久版
                 # 确保促销标签被隐藏和停止动画
                 if hasattr(self, 'promotion_label'):
                     self.promotion_label.hide()
