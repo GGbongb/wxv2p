@@ -191,57 +191,47 @@ class HoverInfoWidget(QWidget):
     def activate_code(self):
         """激活码验证处理"""
         logger.debug("开始激活码验证流程")
-        from components.activation_manager import ActivationManager
+        
+        # 查找主窗口
         from components.video_drag_window import VideoDragDropWindow
+        main_window = None
+        parent_widget = self
         
-        activation_manager = ActivationManager()
+        logger.debug(f"HoverInfoWidget 的直接父级: {type(self.parent())}")
         
-        code = self.activation_input.text().strip()
-        if not code:
-            QMessageBox.warning(self, "提示", "请输入激活码")
-            return
-            
-        success, message = activation_manager.activate(code)
-        logger.debug(f"激活结果: success={success}, message={message}")
+        while parent_widget:
+            logger.debug(f"查找主窗口，当前组件: {type(parent_widget)}")
+            if isinstance(parent_widget, VideoDragDropWindow):
+                main_window = parent_widget
+                break
+            parent_widget = parent_widget.parent()
         
-        if success:
-            QMessageBox.information(self, "成功", message)
-            
-            # 查找主窗口
-            main_window = None
-            parent_widget = self
-            while parent_widget:
-                if isinstance(parent_widget, VideoDragDropWindow):
-                    main_window = parent_widget
-                    break
-                parent_widget = parent_widget.parent()
-                
-            if main_window:
-                logger.debug("找到主窗口，开始更新状态")
-                main_window.update_activation_status()
-                self.hide()  # 隐藏悬浮框
-            else:
-                logger.error("未找到主窗口 VideoDragDropWindow 实例")
+        if main_window:
+            logger.debug("找到主窗口，准备更新状态")
+            main_window.update_activation_status()
+            self.hide()
         else:
-            QMessageBox.warning(self, "错误", message)
+            logger.error("激活时未找到主窗口")
 
-        def leaveEvent(self, event):
-            """鼠标离开悬浮框"""
-            # 获取鼠标当前位置
-            mouse_pos = QCursor.pos()
-            
-            # 检查鼠标是否在悬浮框内
-            widget_rect = self.geometry()
-            global_rect = QRect(self.mapToGlobal(widget_rect.topLeft()),
+    def leaveEvent(self, event):
+        """鼠标离开悬浮框"""
+        # 获取鼠标当前位置
+        mouse_pos = QCursor.pos()
+        
+        # 检查鼠标是否在悬浮框内
+        widget_rect = self.geometry()
+        global_rect = QRect(self.mapToGlobal(widget_rect.topLeft()),
                             self.mapToGlobal(widget_rect.bottomRight()))
-            
-            if not global_rect.contains(mouse_pos):
-                self.hide()
-                logger.debug("鼠标离开悬浮框区域，隐藏悬浮框")
+        
+        if not global_rect.contains(mouse_pos):
+            self.hide()
+            logger.debug("鼠标离开悬浮框区域，隐藏悬浮框")
 
 class AnimatedPromotionLabel(QLabel):
     def __init__(self, parent=None):
         super().__init__(parent)
+        logger.debug(f"AnimatedPromotionLabel 初始化, parent={parent}")
+        
         self.setStyleSheet("""
             QLabel {
                 color: #e74c3c;
@@ -286,20 +276,24 @@ class AnimatedPromotionLabel(QLabel):
         self.animation_group.addAnimation(self.color_animation)
         self.animation_group.addAnimation(self.scale_animation)
         
-        # 修改悬浮框的创建方式，确保能找到 VideoDragDropWindow
+        # 查找主窗口并创建悬浮框
         from components.video_drag_window import VideoDragDropWindow
         main_window = None
         parent_widget = self
         
         while parent_widget:
+            logger.debug(f"当前父级组件: {type(parent_widget)}")
             if isinstance(parent_widget, VideoDragDropWindow):
                 main_window = parent_widget
                 break
             parent_widget = parent_widget.parent()
+        
+        if main_window:
+            logger.debug("成功找到主窗口，创建悬浮框")
+        else:
+            logger.error("在初始化时未找到主窗口")
             
-        self.hover_widget = HoverInfoWidget(main_window)  # 传入主窗口实例
-        self.hover_widget.setWindowFlags(Qt.FramelessWindowHint | Qt.ToolTip)
-        self.hover_widget.setAttribute(Qt.WA_TranslucentBackground)
+        self.hover_widget = HoverInfoWidget(main_window)
         
         # 设置鼠标追踪
         self.setMouseTracking(True)

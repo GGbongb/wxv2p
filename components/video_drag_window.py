@@ -9,6 +9,7 @@ from .video_process_thread import VideoProcessThread
 from .image_viewer import ImageViewer
 from components.video_process_thread import VideoProcessThread
 from .status_display import StatusDisplay
+from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
 
@@ -286,3 +287,34 @@ class VideoDragDropWindow(QMainWindow):
             except Exception as e:
                 print(f"发生错误: {e}")  # 调试信息
                 QMessageBox.warning(self, "错误", f"清除激活信息时发生错误: {e}")
+
+                # 添加开发测试快捷键：Ctrl+Shift+T 切换到体验版
+        if (event.modifiers() & Qt.ControlModifier and 
+            event.modifiers() & Qt.ShiftModifier and 
+            event.key() == Qt.Key_T):
+            logger.debug("检测到开发测试快捷键 Ctrl+Shift+T")
+            try:
+                from components.activation_manager import ActivationManager
+                activation_manager = ActivationManager()
+                
+                # 创建7天体验版的激活信息
+                test_info = {
+                    "code": "TEST-MODE",
+                    "activation_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    "expiry_date": (datetime.now() + timedelta(days=7)).strftime("%Y-%m-%d %H:%M:%S"),
+                    "duration_days": 7,
+                    "type": 0  # 试用版类型
+                }
+                
+                # 保存测试激活信息
+                activation_manager.activation_info = test_info
+                activation_manager.save_activation_info(test_info)
+                
+                # 更新状态显示
+                self.update_activation_status()
+                logger.debug("已切换到体验版状态")
+                QMessageBox.information(self, "提示", "已切换到体验版状态")
+                
+            except Exception as e:
+                logger.error(f"切换到体验版时发生错误: {str(e)}")
+                QMessageBox.warning(self, "错误", f"切换失败: {str(e)}")            
