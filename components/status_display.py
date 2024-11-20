@@ -372,12 +372,13 @@ class StatusDisplay(QWidget):
         from components.activation_manager import ActivationManager
         activation_manager = ActivationManager()
         remaining_days, remaining_hours = activation_manager.get_remaining_time()
+        activation_type = activation_manager.activation_info.get('type') if activation_manager.activation_info else None
         
-        logger.debug(f"更新状态显示: 已激活={is_activated}, 剩余天数={remaining_days}")
+        logger.debug(f"更新状态显示: 已激活={is_activated}, 类型={activation_type}")
         
         # 更新状态显示
         if is_activated:
-            if remaining_days >= 3650:  # 永久版
+            if activation_type == 3:  # 永久版
                 # 确保促销标签被隐藏和停止动画
                 if hasattr(self, 'promotion_label'):
                     self.promotion_label.hide()
