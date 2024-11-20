@@ -69,18 +69,18 @@ class ActivationManager:
             # 创建激活信息
             activation_info = {
                 "code": code,
-                "activation_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),  # 使用当前时间
+                "activation_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                 "expiry_date": data["expiry_date"],
                 "duration_days": data["duration_days"],
                 "type": data["type"]
             }
             
-            # 保存激活信息
+            # 保存激活信息（覆盖原有信息）
             self.activation_info = activation_info
             self.save_activation_info(activation_info)
             
             dialog.close()
-            return True, message
+            return True, "激活成功" if data["type"] != 3 else "成功升级到永久版"
             
         except Exception as e:
             logger.error(f"激活过程中发生错误: {str(e)}", exc_info=True)
