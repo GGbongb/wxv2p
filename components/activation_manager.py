@@ -66,6 +66,11 @@ class ActivationManager:
                 dialog.close()
                 return False, message
             
+            # 检查是否是升级到永久版
+            is_upgrade = (self.activation_info is not None and 
+                         data['type'] == 3 and 
+                         self.activation_info.get('type') == 0)
+            
             # 创建激活信息
             activation_info = {
                 "code": code,
@@ -75,12 +80,12 @@ class ActivationManager:
                 "type": data["type"]
             }
             
-            # 保存激活信息（覆盖原有信息）
+            # 保存激活信息
             self.activation_info = activation_info
             self.save_activation_info(activation_info)
             
             dialog.close()
-            return True, "激活成功" if data["type"] != 3 else "成功升级到永久版"
+            return True, "成功升级到永久版" if is_upgrade else "激活成功"
             
         except Exception as e:
             logger.error(f"激活过程中发生错误: {str(e)}", exc_info=True)
