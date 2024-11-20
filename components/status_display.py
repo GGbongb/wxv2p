@@ -235,111 +235,57 @@ class AnimatedPromotionLabel(QLabel):
         super().__init__(parent)
         logger.debug(f"AnimatedPromotionLabel 初始化, parent={parent}")
         
-        # 先找到主窗口
-        from components.video_drag_window import VideoDragDropWindow
-        self.main_window = None
-        parent_widget = self
-        
-        while parent_widget:
-            logger.debug(f"查找主窗口，当前组件: {type(parent_widget)}")
-            if isinstance(parent_widget, VideoDragDropWindow):
-                self.main_window = parent_widget
-                break
-            parent_widget = parent_widget.parent()
-            
-        if self.main_window:
-            logger.debug("成功找到主窗口")
-            # 创建悬浮框并设置主窗口为父级
-            self.hover_widget = HoverInfoWidget()
-            self.hover_widget.setParent(self.main_window)
-            # 保存主窗口引用
-            self.hover_widget.main_window = self.main_window
-        else:
-            logger.error("初始化时未找到主窗口")
-            
-        self.setStyleSheet("""
-            QLabel {
-                color: #e74c3c;
-                font-size: 16px;
-                padding: 5px 10px;
-                border-radius: 4px;
-                background-color: #fff3e0;
-            }
-        """)
-        
-        # 创建动画组
-        self.animation_group = QParallelAnimationGroup(self)
-        
-        # 颜色渐变动画
-        self.color_animation = QPropertyAnimation(self, b"styleSheet")
-        self.color_animation.setDuration(1500)  # 1.5秒一个周期
-        self.color_animation.setLoopCount(-1)   # 永久循环
-        
-        # 设置颜色渐变关键帧
-        style_template = """
-            QLabel {
-                color: %s;
-                font-size: 16px;
-                padding: 5px 10px;
-                border-radius: 4px;
-                background-color: %s;
-            }
-        """
-        
-        # 正确设置关键帧
-        self.color_animation.setStartValue(style_template % ('#e74c3c', '#fff3e0'))
-        self.color_animation.setKeyValueAt(0.5, style_template % ('#d35400', '#ffe0b2'))
-        self.color_animation.setEndValue(style_template % ('#e74c3c', '#fff3e0'))
-        
-        # 缩放动画
-        self.scale_animation = QPropertyAnimation(self, b"minimumWidth")
-        self.scale_animation.setDuration(1500)
-        self.scale_animation.setLoopCount(-1)
-        self.scale_animation.setEasingCurve(QEasingCurve.InOutQuad)
-        
-        # 将两个动画添加到动画组
-        self.animation_group.addAnimation(self.color_animation)
-        self.animation_group.addAnimation(self.scale_animation)
-        
-        # 设置鼠标追踪
-        self.setMouseTracking(True)
-        
-    def start_animation(self):
-        """开始动画"""
-        # 设置缩放动画的范围（基于文字宽度）
-        base_width = self.fontMetrics().width(self.text()) + 40
-        self.scale_animation.setStartValue(base_width)
-        self.scale_animation.setEndValue(base_width + 20)
-        
-        self.animation_group.start()
-        
-    def stop_animation(self):
-        """停止动画"""
-        self.animation_group.stop()
+        # 延迟创建悬浮框，等待父级组件完全初始化
+        self.hover_widget = None
         
     def enterEvent(self, event):
-        """鼠标进入标签"""
-        # 计算悬浮框位置（在标签正下方显示）
+        """鼠标进入标签时创建并显示悬浮框"""
+        # 如果悬浮框还没创建，就创建它
+        if self.hover_widget is None:
+            # 查找主窗口
+            from components.video_drag_window import VideoDragDropWindow
+            main_window = None
+            parent_widget = self
+            
+            while parent_widget:
+                logger.debug(f"查找主窗口，当前组件: {type(parent_widget)}")
+                if isinstance(parent_widget, VideoDragDropWindow):
+                    main_window = parent_widget
+                    break
+                parent_widget = parent_widget.parent()
+                
+            if main_window:
+                logger.debug("成功找到主窗口，创建悬浮框")
+                self.hover_widget = HoverInfoWidget()
+                self.hover_widget.setParent(main_window)
+                self.hover_widget.main_window = main_window
+                # 设置窗口标志
+                self.hover_widget.setWindowFlags(Qt.FramelessWindowHint | Qt.ToolTip | Qt.WindowStaysOnTopHint)
+                self.hover_widget.setAttribute(Qt.WA_TranslucentBackground)
+            else:
+                logger.error("未找到主窗口，无法创建悬浮框")
+                return
+                
+        # 计算悬浮框位置
         pos = self.mapToGlobal(QPoint(0, self.height() + 5))
-        
-        # 水平居中对齐
         pos.setX(pos.x() + (self.width() - self.hover_widget.width()) // 2)
         
         self.hover_widget.move(pos)
         self.hover_widget.show()
-        logger.debug("鼠标进入促销标签，显示悬浮框")
+        logger.debug("显示悬浮框")
         
     def leaveEvent(self, event):
         """鼠标离开标签"""
-        # 获取鼠标当前位置
-        mouse_pos = QCursor.pos()
-        
-        # 检查鼠标是否在悬浮框内
-        hover_widget_rect = QRect(self.hover_widget.pos(), self.hover_widget.size())
-        
-        if not hover_widget_rect.contains(mouse_pos):
-            self.hover_widget.hide()
-            logger.debug("鼠标离开促销标签且不在悬浮框内，隐藏悬浮框")
+        if self.hover_widget:
+            # 获取鼠标当前位置
+            mouse_pos = QCursor.pos()
+            
+            # 检查鼠标是否在悬浮框内
+            hover_widget_rect = QRect(self.hover_widget.pos(), self.hover_widget.size())
+            
+            if not hover_widget_rect.contains(mouse_pos):
+                self.hover_widget.hide()
+                logger.debug("隐藏悬浮框")
 
 class StatusDisplay(QWidget):
     def __init__(self, parent=None):
