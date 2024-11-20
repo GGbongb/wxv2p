@@ -235,8 +235,24 @@ class AnimatedPromotionLabel(QLabel):
         super().__init__(parent)
         logger.debug(f"AnimatedPromotionLabel 初始化, parent={parent}")
         
-        # 延迟创建悬浮框，等待父级组件完全初始化
+        # 初始化动画
+        self.animation = QPropertyAnimation(self, b"pos")
+        self.animation.setDuration(1000)  # 1秒
+        self.animation.setEasingCurve(QEasingCurve.InOutQuad)
+        
+        # 延迟创建悬浮框
         self.hover_widget = None
+        
+        # 设置初始样式
+        self.setStyleSheet("""
+            QLabel {
+                color: #e74c3c;
+                font-size: 24px;
+                padding: 5px 10px;
+                background-color: #ffeaa7;
+                border-radius: 4px;
+            }
+        """)
         
     def enterEvent(self, event):
         """鼠标进入标签时创建并显示悬浮框"""
@@ -286,6 +302,36 @@ class AnimatedPromotionLabel(QLabel):
             if not hover_widget_rect.contains(mouse_pos):
                 self.hover_widget.hide()
                 logger.debug("隐藏悬浮框")
+
+    def start_animation(self):
+        """开始动画效果"""
+        logger.debug("开始促销标签动画")
+        current_pos = self.pos()
+        
+        # 设置动画起始和结束位置
+        self.animation.setStartValue(current_pos)
+        end_pos = current_pos + QPoint(10, 0)  # 向右移动10像素
+        self.animation.setEndValue(end_pos)
+        
+        # 设置动画完成后的回调
+        self.animation.finished.connect(self._reverse_animation)
+        
+        # 开始动画
+        self.animation.start()
+        
+    def _reverse_animation(self):
+        """反向动画"""
+        current_pos = self.pos()
+        self.animation.setStartValue(current_pos)
+        start_pos = current_pos - QPoint(10, 0)  # 向左移动回原位置
+        self.animation.setEndValue(start_pos)
+        self.animation.start()
+        
+    def stop_animation(self):
+        """停止动画"""
+        logger.debug("停止促销标签动画")
+        if self.animation.state() == QPropertyAnimation.Running:
+            self.animation.stop()
 
 class StatusDisplay(QWidget):
     def __init__(self, parent=None):
