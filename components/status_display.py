@@ -371,7 +371,7 @@ class StatusDisplay(QWidget):
 
         from components.activation_manager import ActivationManager
         activation_manager = ActivationManager()
-        remaining_days, remaining_hours = activation_manager.get_remaining_time()
+        remaining_days, remaining_hours, remaining_minutes, remaining_seconds = activation_manager.get_remaining_time()
         activation_type = activation_manager.activation_info.get('type') if activation_manager.activation_info else None
         
         logger.debug(f"更新状态显示: 已激活={is_activated}, 类型={activation_type}")
@@ -394,11 +394,11 @@ class StatusDisplay(QWidget):
                     }
                 """
                 logger.debug("已设置为永久版状态")
-            elif remaining_days == 7 or (remaining_days == 6 and remaining_hours > 0):  # 7天体验期
+            elif activation_type == 0:  # 7天体验期
                 self.promotion_label.show()
                 self.promotion_label.setText("限时折扣：7天体验期内购买永久版可享受10元优惠，仅需40元")
                 self.promotion_label.start_animation()
-                status_text = f"体验期剩余：{remaining_days}天{remaining_hours}小时"
+                status_text = f"体验期剩余：{remaining_days}天{remaining_hours}小时{remaining_minutes}分钟{remaining_seconds}秒"
                 style = """
                     QLabel {
                         color: #e67e22;
@@ -411,7 +411,7 @@ class StatusDisplay(QWidget):
             else:
                 self.promotion_label.hide()
                 self.promotion_label.stop_animation()
-                status_text = f"剩余使用时间：{remaining_days}天{remaining_hours}小时"
+                status_text = f"剩余使用时间：{remaining_days}天{remaining_hours}小时{remaining_minutes}分钟{remaining_seconds}秒"
                 style = """
                     QLabel {
                         color: #27ae60;

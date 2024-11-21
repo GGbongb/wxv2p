@@ -124,24 +124,31 @@ class ActivationManager:
     def get_remaining_time(self):
         """获取剩余时间（天数和小时数）"""
         if not self.activation_info:
-            return 0, 0
+            return 0, 0,0,0
             
         try:
             expiry_date = datetime.strptime(
                 self.activation_info["expiry_date"], 
                 "%Y-%m-%d %H:%M:%S"
             )
+            print(expiry_date)
             remaining = expiry_date - datetime.now()
             
-            # 计算总小时数
-            total_hours = int(remaining.total_seconds() / 3600)
-            # 分离天数和小时数
-            days = total_hours // 24
-            hours = total_hours % 24
+            # 计算总秒数
+            total_seconds = int(remaining.total_seconds())
             
-            return days, hours
-        except:
-            return 0, 0
+            # 分离天数、小时数、分钟数和秒数
+            days = total_seconds // (24 * 3600)
+            hours = (total_seconds % (24 * 3600)) // 3600
+            minutes = (total_seconds % 3600) // 60
+            seconds = total_seconds % 60
+            
+            return days, hours, minutes, seconds
+        
+        except Exception as e:
+            print(f"Error: {e}")
+            return 0, 0, 0, 0
+
 
     def keyPressEvent(self, event):
         # 按下 Ctrl+Shift+D 清除激活信息（仅在开发环境中）
