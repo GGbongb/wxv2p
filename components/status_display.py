@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import (QLabel, QWidget, QHBoxLayout, QVBoxLayout, 
                            QFrame, QLineEdit, QPushButton, QMessageBox, QMainWindow)
-from PyQt5.QtCore import Qt, QPropertyAnimation, QEasingCurve, QParallelAnimationGroup, QPoint, QRect
+from PyQt5.QtCore import Qt, QPropertyAnimation, QEasingCurve, QParallelAnimationGroup, QPoint, QRect, QTimer
 from PyQt5.QtGui import QColor, QPixmap, QCursor
 import os
 from tools.utils import resource_path
@@ -331,6 +331,11 @@ class StatusDisplay(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.init_ui()
+
+        # 添加定时器
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self.update_countdown)
+        self.timer.start(1000)  # 每秒更新一次
         
     def init_ui(self):
         layout = QHBoxLayout(self)
@@ -442,3 +447,46 @@ class StatusDisplay(QWidget):
         self.activation_label.update()
         self.update()
         logger.debug(f"状态显示已更新: {status_text}")
+
+    def update_countdown(self):
+        """更新倒计时显示"""
+        if not hasattr(self, 'activation_label'):
+            return
+            
+        from components.activation_manager import ActivationManager
+        activation_manager = ActivationManager()
+        
+        if not activation_manager.is_activated():
+            return
+            
+        activation_type = activation_manager.activation_info.get('type')
+        if activation_type == 3:  # 永久版不需要倒计时
+            return
+            
+        remaining_days, remaining_hours, remaining_minutes, remaining_seconds = activation_manager.get_remaining_time()
+        
+        if activation_type == 0:  # 7天体验期
+            status_text = f"体验期剩余：{remaining_days}天{remaining_hours}小时{remaining_minutes}分钟{remaining_seconds}秒"
+            style = """
+                QLabel {
+                    color: #e67e22;
+                    font-size: 24px;
+                    padding: 5px 10px;
+                    background-color: #ffeaa7;
+                    border-radius: 4px;
+                }
+            """
+        else:  # 其他类型的激活
+            status_text = f"剩余使用时间：{remaining_days}天{remaining_hours}小时{remaining_minutes}分钟{remaining_seconds}秒"
+            style = """
+                QLabel {
+                    color: #27ae60;
+                    font-size: 24px;
+                    padding: 5px 10px;
+                    background-color: #e8f5e9;
+                    border-radius: 4px;
+                }
+            """
+            
+        self.activation_label.setText(status_text)
+        self.activation_label.setStyleSheet(style)

@@ -131,7 +131,7 @@ class ActivationManager:
                 self.activation_info["expiry_date"], 
                 "%Y-%m-%d %H:%M:%S"
             )
-            print(expiry_date)
+            #print(expiry_date)
             remaining = expiry_date - datetime.now()
             
             # 计算总秒数
