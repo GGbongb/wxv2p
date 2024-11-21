@@ -335,7 +335,8 @@ class StatusDisplay(QWidget):
         # 添加定时器
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.update_countdown)
-        self.timer.start(1000)  # 每秒更新一次
+        # 初始检查激活状态
+        self.check_and_start_timer()
         
     def init_ui(self):
         layout = QHBoxLayout(self)
@@ -370,9 +371,43 @@ class StatusDisplay(QWidget):
         layout.addStretch()
         layout.addWidget(self.activation_label)
         
+    def check_and_start_timer(self):
+        """检查激活状态并决定是否启动定时器"""
+        from components.feature_guard import FeatureGuard
+        
+        if FeatureGuard.can_use_premium_features():
+            logger.debug("检测到有效激活，启动倒计时")
+            self.timer.start(1000)  # 每秒更新一次
+        else:
+            logger.debug("未激活状态，停止倒计时")
+            self.timer.stop()
+            # 更新为未激活状态显示
+            self.update_inactive_status()
+            
+    def update_inactive_status(self):
+        """更新为未激活状态显示"""
+        self.promotion_label.hide()
+        self.promotion_label.stop_animation()
+        
+        status_text = "未激活"
+        style = """
+            QLabel {
+                color: #c0392b;
+                font-size: 24px;
+                padding: 5px 10px;
+                background-color: #ffebee;
+                border-radius: 4px;
+            }
+        """
+        self.activation_label.setText(status_text)
+        self.activation_label.setStyleSheet(style)
+
     def update_status(self, is_activated):
         """更新状态显示"""
         logger.debug(f"StatusDisplay.update_status 被调用: is_activated={is_activated}")
+        
+        # 更新状态后检查是否需要启动定时器
+        self.check_and_start_timer()
 
         from components.activation_manager import ActivationManager
         activation_manager = ActivationManager()
