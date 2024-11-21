@@ -22,12 +22,12 @@ class FeatureGuard:
             return True
             
         # 检查是否过期
-        remaining_days, _, _, _ = activation_manager.get_remaining_time()
-        if remaining_days <= 0:
-            logger.debug("激活已过期，清除激活信息")
+        remaining_days, remaining_hours, remaining_minutes, remaining_seconds = activation_manager.get_remaining_time()
+        if remaining_days <= 0 and remaining_hours <= 0 and remaining_minutes <= 0 and remaining_seconds <= 0:
+            logger.debug(f"激活已过期 (剩余: {remaining_days}天{remaining_hours}时{remaining_minutes}分{remaining_seconds}秒)")
             # 清除激活信息
             activation_manager.clear_activation()
             return False
             
-        logger.debug(f"激活状态有效，剩余天数: {remaining_days}")
+        logger.debug(f"激活状态有效，剩余: {remaining_days}天{remaining_hours}时{remaining_minutes}分{remaining_seconds}秒")
         return True
