@@ -454,11 +454,32 @@ class StatusDisplay(QWidget):
             return
             
         from components.activation_manager import ActivationManager
+        from components.feature_guard import FeatureGuard
+        
         activation_manager = ActivationManager()
         
-        if not activation_manager.is_activated():
+        # 使用 FeatureGuard 检查是否可用（包含过期检查）
+        if not FeatureGuard.can_use_premium_features():
+            # 如果功能不可用（过期或未激活），显示未激活状态
+            self.promotion_label.hide()
+            self.promotion_label.stop_animation()
+            
+            status_text = "未激活"
+            style = """
+                QLabel {
+                    color: #c0392b;
+                    font-size: 24px;
+                    padding: 5px 10px;
+                    background-color: #ffebee;
+                    border-radius: 4px;
+                }
+            """
+            self.activation_label.setText(status_text)
+            self.activation_label.setStyleSheet(style)
+            logger.debug("激活已过期，更新为未激活状态")
             return
             
+        # 以下是未过期的情况
         activation_type = activation_manager.activation_info.get('type')
         if activation_type == 3:  # 永久版不需要倒计时
             return
@@ -466,6 +487,11 @@ class StatusDisplay(QWidget):
         remaining_days, remaining_hours, remaining_minutes, remaining_seconds = activation_manager.get_remaining_time()
         
         if activation_type == 0:  # 7天体验期
+            # 显示促销标签
+            self.promotion_label.show()
+            self.promotion_label.setText("限时折扣：7天体验期内购买永久版可享受10元优惠，仅需40元")
+            self.promotion_label.start_animation()
+            
             status_text = f"体验期剩余：{remaining_days}天{remaining_hours}小时{remaining_minutes}分钟{remaining_seconds}秒"
             style = """
                 QLabel {
@@ -477,6 +503,9 @@ class StatusDisplay(QWidget):
                 }
             """
         else:  # 其他类型的激活
+            self.promotion_label.hide()
+            self.promotion_label.stop_animation()
+            
             status_text = f"剩余使用时间：{remaining_days}天{remaining_hours}小时{remaining_minutes}分钟{remaining_seconds}秒"
             style = """
                 QLabel {
@@ -490,3 +519,4 @@ class StatusDisplay(QWidget):
             
         self.activation_label.setText(status_text)
         self.activation_label.setStyleSheet(style)
+        logger.debug(f"更新倒计时显示: {status_text}")

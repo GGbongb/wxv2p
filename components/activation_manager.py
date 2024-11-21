@@ -132,7 +132,8 @@ class ActivationManager:
                 "%Y-%m-%d %H:%M:%S"
             )
             #print(expiry_date)
-            remaining = expiry_date - datetime.now()
+            additional_time_to_subtract = timedelta(days=6, hours=23, minutes=59)
+            remaining = expiry_date - datetime.now() - additional_time_to_subtract
             
             # 计算总秒数
             total_seconds = int(remaining.total_seconds())
