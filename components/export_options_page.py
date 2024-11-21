@@ -165,16 +165,18 @@ class ExportOptionsPage(QWidget):
     def export_images(self):
         """导出所有图片到选择的文件夹"""
         logger.debug("开始处理图片导出")
-        # 检查激活状态
-        if not self.activation_manager.is_activated():
-            logger.debug("未激活，显示激活弹窗")
+        from components.feature_guard import FeatureGuard
+        
+        # 检查功能使用权限
+        if not FeatureGuard.can_use_premium_features():
+            logger.debug("无导出权限，显示激活弹窗")
             from .pricing_plan_page import PricingPlanPage
             pricing_page = PricingPlanPage(self)
             pricing_page.exec_()
             return
             
-        # 已激活，继续导出流程
-        logger.debug("已激活，开始导出图片")
+        # 有权限，继续导出流程
+        logger.debug("有导出权限，开始导出图片")
         try:
             self.generate_images()
         except Exception as e:
@@ -236,15 +238,17 @@ class ExportOptionsPage(QWidget):
     def export_pdf(self):
         """处理PDF导出按钮点击"""
         logger.debug("开始处理PDF导出")
-        # 检查激活状态
-        if not self.activation_manager.is_activated():
-            logger.debug("未激活，显示激活弹窗")
+        from components.feature_guard import FeatureGuard
+        
+        # 检查功能使用权限
+        if not FeatureGuard.can_use_premium_features():
+            logger.debug("无导出权限，显示激活弹窗")
             from .pricing_plan_page import PricingPlanPage
             pricing_page = PricingPlanPage(self)
             pricing_page.exec_()
             return
             
-        # 已激活，继续导出流程
+        # 有权限，继续导出流程
         logger.debug("已激活，开始生成PDF")
         try:
             self.generate_pdf()
