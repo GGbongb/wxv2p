@@ -12,12 +12,10 @@ added_files = [
     # 添加资源文件
     ('resources/*.png', 'resources'),  # 所有PNG图片
     ('resources/icon.ico', 'resources'),  # 添加图标文件
+    ('resources/key.bin', 'resources'),
+    ('resources/api.bin', 'resources'),
 ]
 
-a.datas += [
-    ('resources/key.bin', 'path/to/resources/key.bin', 'DATA'),
-    ('resources/api.bin', 'path/to/resources/api.bin', 'DATA'),
-]
 
 a = Analysis(
     ['main.py'],
