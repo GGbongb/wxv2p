@@ -14,6 +14,11 @@ added_files = [
     ('resources/icon.ico', 'resources'),  # 添加图标文件
 ]
 
+a.datas += [
+    ('resources/key.bin', 'path/to/resources/key.bin', 'DATA'),
+    ('resources/api.bin', 'path/to/resources/api.bin', 'DATA'),
+]
+
 a = Analysis(
     ['main.py'],
     pathex=[],
