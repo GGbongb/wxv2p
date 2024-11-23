@@ -7,11 +7,9 @@ import sys
 import os
 import time
 import importlib
-import requests
-import subprocess
 import app
 from win32com.client import Dispatch
-import logger
+
 
 
 def create_desktop_shortcut():
@@ -67,61 +65,34 @@ def check_for_file_changes():
         # 如果找不到文件，直接返回 False
         return False
 
-#def check_for_updates(current_version):
-    """检查更新"""
-    try:
-        response = requests.get("https://api.github.com/repos/GGbongb/wxv2p/releases/latest")
-        if response.status_code == 200:
-            latest_release = response.json()
-            latest_version = latest_release['tag_name']
-            download_url = latest_release['assets'][0]['browser_download_url']
-
-            if latest_version > current_version:
-                return latest_version, download_url
-    except Exception as e:
-        print(f"检查更新时发生错误: {e}")
-    return None, None
-
-#def download_update(download_url):
-    """下载更新文件"""
-    try:
-        response = requests.get(download_url)
-        if response.status_code == 200:
-            with open("update.exe", "wb") as f:  # 保存更新文件
-                f.write(response.content)
-            return True
-    except Exception as e:
-        print(f"下载更新时发生错误: {e}")
-    return False
-
-#def install_update():
-    """安装更新"""
-    try:
-        subprocess.call(["update.exe"])  # 运行更新程序
-    except Exception as e:
-        print(f"安装更新时发生错误: {e}")
-
 if __name__ == "__main__":
     try:
         # 创建桌面快捷方式
         create_desktop_shortcut()
         
+        # 先创建应用实例
+        print("启动主程序...")
+        app_instance = app.run(show_window=False)  # 修改 app.run 以支持不立即显示窗口
+        
+        print("正在启动更新检查...")
         # 检查更新
         from components.update_manager import UpdateManager
-        update_manager = UpdateManager()
+        update_manager = UpdateManager(app_instance.main_window)  # 传入主窗口
         update_info = update_manager.check_for_updates()
         
         if update_info:
             new_version, download_url, release_notes = update_info
             if update_manager.prompt_update(new_version, release_notes):
                 update_manager.download_and_install(download_url)
+                
+        # 显示主窗口
+        app_instance.main_window.show()
+        app_instance.exec_()
             
     except Exception as e:
-        logger.error(f"启动过程出错: {e}")
-    
-    # 运行主程序
-    app.run()
-    
+        print(f"启动过程出错: {e}")
+        import traceback
+        print(traceback.format_exc())
     # 在开发环境中检查文件变化
     if not getattr(sys, 'frozen', False):
         while True:

@@ -49,32 +49,48 @@ class UpdateManager:
         
     def check_for_updates(self):
         """检查更新"""
+        print("开始检查更新...")
         try:
             base_url = self.network_manager.update_url
             if not base_url:
-                logger.error("无法获取更新 URL")
+                print("无法获取更新 URL")
                 return None
                 
-            # 获取版本信息
+            print(f"正在获取版本信息...")
             response = requests.get(
                 f"{base_url}/version.json",
                 timeout=10
             )
+            print(f"服务器响应: {response.status_code}")
             
             if response.status_code == 200:
-                data = response.json()
-                new_version = data.get("version")
-                
-                if Version.compare_versions(new_version, self.current_version) > 0:
-                    # URL 编码处理文件路径
-                    file_path = quote(data.get("file_path", ""))
-                    download_url = f"{base_url}/{file_path}"
+                try:
+                    data = response.json()
+                    print(f"版本信息: {data}")
+                    new_version = data.get("version")
                     
-                    notes = "\n".join(data.get("release_notes", []))
-                    return (new_version, download_url, notes)
+                    if not new_version:
+                        print("未找到版本信息")
+                        return None
+                        
+                    print(f"当前版本: {self.current_version}, 最新版本: {new_version}")
+                    
+                    if Version.compare_versions(new_version, self.current_version) > 0:
+                        file_path = quote(data.get("file_path", ""))
+                        download_url = f"{base_url}/{file_path}"
+                        notes = "\n".join(data.get("release_notes", []))
+                        print(f"发现新版本，下载地址: {download_url}")
+                        return (new_version, download_url, notes)
+                    else:
+                        print("当前已是最新版本")
+                        
+                except ValueError as e:
+                    print(f"解析版本信息失败: {e}")
+                    print(f"响应内容: {response.text}")
                     
         except Exception as e:
-            logger.error(f"检查更新时发生错误: {str(e)}")
+            print(f"检查更新时发生错误: {str(e)}")
+            
         return None
         
     def prompt_update(self, new_version, release_notes):
@@ -88,15 +104,25 @@ class UpdateManager:
         )
         return reply == QMessageBox.Yes
         
-    def download_and_install(self, download_url):
-        """下载并安装更新"""
+def download_and_install(self, download_url):
+    """下载并安装更新"""
+    try:
         # 创建进度对话框
         progress_dialog = QProgressDialog("正在下载更新...", "取消", 0, 100, self.parent)
         progress_dialog.setWindowTitle("更新下载")
         progress_dialog.setAutoClose(True)
         
+        # 根据运行环境确定保存路径
+        if getattr(sys, 'frozen', False):
+            # 打包环境
+            save_path = os.path.join(os.path.dirname(sys.executable), "update.exe")
+        else:
+            # 开发环境
+            save_path = os.path.join(os.getcwd(), "update.exe")
+            
+        print(f"更新文件将保存到: {save_path}")
+        
         # 创建下载线程
-        save_path = os.path.join(os.path.dirname(sys.executable), "update.exe")
         downloader = UpdateDownloader(download_url, save_path)
         
         # 连接信号
@@ -108,6 +134,10 @@ class UpdateManager:
         # 开始下载
         downloader.start()
         progress_dialog.exec_()
+        
+    except Exception as e:
+        print(f"下载更新时发生错误: {e}")
+        QMessageBox.critical(self.parent, "错误", f"下载更新时发生错误: {e}")
         
     def handle_download_finished(self, success, message, save_path):
         """处理下载完成"""
