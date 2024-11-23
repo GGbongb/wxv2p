@@ -103,23 +103,18 @@ if __name__ == "__main__":
     try:
         # 创建桌面快捷方式
         create_desktop_shortcut()
+        
+        # 检查更新
+        from components.update_manager import UpdateManager
+        update_manager = UpdateManager()
+        latest_version, download_url = update_manager.check_for_updates()
+        
+        if latest_version and update_manager.prompt_update(latest_version):
+            update_manager.download_and_install(download_url)
+            
     except Exception as e:
-        print(f"快捷方式创建过程出错: {e}")
+        print(f"启动过程出错: {e}")
     
-    current_version = "0.1"
-    #latest_version, download_url = check_for_updates(current_version)
-
-#    if latest_version:
-#        print(f"发现新版本: {latest_version}")
-#        if download_update(download_url):
-         #   print("更新下载完成，正在安装...")
-        #    install_update()
-         #   sys.exit()
- #       else:
- #           print("更新下载失败。")
- #   else:
-   #     print("当前已是最新版本。")
-
     # 运行主程序
     app.run()
     

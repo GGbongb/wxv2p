@@ -37,7 +37,8 @@ a = Analysis(
         'win32con',
         'winreg',
         'pythoncom',
-        'pywintypes'
+        'pywintypes',
+		'cryptography'
     ],
     hookspath=[],
     hooksconfig={},

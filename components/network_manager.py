@@ -9,15 +9,18 @@ logger = logging.getLogger(__name__)
 
 class NetworkManager:
     def __init__(self):
-        self.api_url = "url"  # 替换为您的API地址
-        self.timeout = 10  # 请求超时时间（秒）
-
-    def _get_api_url(self) -> str:
-        """获取解密后的 API URL"""
+        self.api_url = self._get_api_url("api")  # 云函数 API
+        self.update_url = self._get_api_url("update")  # COS 更新 URL
+        self.timeout = 10
+        
+    def _get_api_url(self, url_type: str) -> str:
+        """获取解密后的 URL
+        url_type: 'api' 或 'update'
+        """
         try:
             # 从资源文件读取加密的 URL
-            key_path = resource_path("resources/key.bin")
-            url_path = resource_path("resources/api.bin")
+            key_path = resource_path(f"resources/{url_type}_key.bin")
+            url_path = resource_path(f"resources/{url_type}_url.bin")
             
             # 读取密钥和加密的 URL
             with open(key_path, 'rb') as f:
@@ -32,8 +35,8 @@ class NetworkManager:
             return decrypted_url.decode()
             
         except Exception as e:
-            logger.error(f"获取 API URL 失败: {str(e)}")
-            return "https://fallback-url.com"  # 备用 URL
+            logger.error(f"获取 {url_type} URL 失败: {str(e)}")
+            return ""
         
     def check_network(self) -> bool:
         """检查网络连接"""
