@@ -4,7 +4,7 @@ block_cipher = None
 
 author = '李洋'
 email = 'liyo84683@gmail.com'
-version = '1.2.1'
+version = '1.2.2'
 copyright = 'Copyright (C) 2024 李洋'
 
 
@@ -42,7 +42,7 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[],
+    excludes=['logging'],  # 排除日志模块
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
     cipher=block_cipher,
@@ -64,7 +64,7 @@ exe = EXE(
     a.datas,
     binaries,
     [],
-    name='微信聊天录屏转图片工具',
+    name='微信聊天录屏转图片',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -72,5 +72,10 @@ exe = EXE(
     upx_exclude=[],
     runtime_tmpdir=None,
     console=False,
+    disable_windowed_traceback=False,
+    argv_emulation=False,
+    target_arch=None,
+    codesign_identity=None,
+    entitlements_file=None,
     icon='resources/icon.ico'
 )

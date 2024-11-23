@@ -67,32 +67,32 @@ def check_for_file_changes():
 
 if __name__ == "__main__":
     try:
-        # 创建桌面快捷方式
-        create_desktop_shortcut()
-        
-        # 先创建应用实例
+        # 延迟导入模块，只在需要时导入
         print("启动主程序...")
-        app_instance = app.run(show_window=False)  # 修改 app.run 以支持不立即显示窗口
+        app_instance = app.run(show_window=True)  # 先显示主窗口
         
-        print("正在启动更新检查...")
-        # 检查更新
-        from components.update_manager import UpdateManager
-        update_manager = UpdateManager(app_instance.main_window)  # 传入主窗口
-        update_info = update_manager.check_for_updates()
+        # 在后台线程中检查更新
+        from PyQt5.QtCore import QTimer
+        def check_update():
+            from components.update_manager import UpdateManager
+            update_manager = UpdateManager(app_instance.main_window)
+            update_info = update_manager.check_for_updates()
+            
+            if update_info:
+                new_version, download_url, release_notes = update_info
+                if update_manager.prompt_update(new_version, release_notes):
+                    update_manager.download_and_install(download_url)
         
-        if update_info:
-            new_version, download_url, release_notes = update_info
-            if update_manager.prompt_update(new_version, release_notes):
-                update_manager.download_and_install(download_url)
-                
-        # 显示主窗口
-        app_instance.main_window.show()
+        # 延迟 2 秒检查更新
+        QTimer.singleShot(2000, check_update)
+        
+        # 延迟创建快捷方式
+        QTimer.singleShot(3000, create_desktop_shortcut)
+        
         app_instance.exec_()
             
     except Exception as e:
         print(f"启动过程出错: {e}")
-        import traceback
-        print(traceback.format_exc())
     # 在开发环境中检查文件变化
     if not getattr(sys, 'frozen', False):
         while True:
