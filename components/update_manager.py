@@ -105,76 +105,76 @@ class UpdateManager:
         )
         return reply == QMessageBox.Yes
         
-def download_and_install(self, download_url):
-    """下载并安装更新"""
-    try:
-        # 创建进度对话框
-        progress_dialog = QProgressDialog(self.parent)
-        progress_dialog.setWindowTitle("更新下载")
-        progress_dialog.setLabelText("正在下载更新...")
-        progress_dialog.setCancelButton(None)  # 禁用取消按钮
-        progress_dialog.setRange(0, 100)
-        progress_dialog.setWindowModality(Qt.WindowModal)  # 模态对话框
-        progress_dialog.setMinimumDuration(0)  # 立即显示
-        progress_dialog.setAutoClose(False)  # 不自动关闭
-        
-        # 根据运行环境确定保存路径
-        if getattr(sys, 'frozen', False):
-            save_path = os.path.join(os.path.dirname(sys.executable), "update.exe")
-        else:
-            save_path = os.path.join(os.getcwd(), "update.exe")
+    def download_and_install(self, download_url):
+        """下载并安装更新"""
+        try:
+            # 创建进度对话框
+            progress_dialog = QProgressDialog(self.parent)
+            progress_dialog.setWindowTitle("更新下载")
+            progress_dialog.setLabelText("正在下载更新...")
+            progress_dialog.setCancelButton(None)  # 禁用取消按钮
+            progress_dialog.setRange(0, 100)
+            progress_dialog.setWindowModality(Qt.WindowModal)  # 模态对话框
+            progress_dialog.setMinimumDuration(0)  # 立即显示
+            progress_dialog.setAutoClose(False)  # 不自动关闭
             
-        # 创建下载线程
-        downloader = UpdateDownloader(download_url, save_path)
-        
-        # 连接信号
-        downloader.progress_signal.connect(progress_dialog.setValue)
-        downloader.finished_signal.connect(
-            lambda success, msg: self.handle_download_finished(success, msg, save_path, progress_dialog)
-        )
-        
-        # 开始下载
-        downloader.start()
-        progress_dialog.exec_()
-        
-    except Exception as e:
-        QMessageBox.critical(self.parent, "错误", f"下载更新时发生错误: {e}")
-        
-def handle_download_finished(self, success, message, save_path, progress_dialog):
-    """处理下载完成"""
-    progress_dialog.close()
-    
-    if success:
-        reply = QMessageBox.question(
-            self.parent,
-            '更新准备就绪',
-            '更新已下载完成，点击"确定"开始安装。\n安装过程中程序将自动关闭，安装完成后请重新启动程序。',
-            QMessageBox.Yes | QMessageBox.No
-        )
-        
-        if reply == QMessageBox.Yes:
-            try:
-                # 显示最后的提示
-                QMessageBox.information(
-                    self.parent,
-                    "开始更新",
-                    "程序即将关闭并开始安装更新，请稍候...",
-                    QMessageBox.Ok
-                )
+            # 根据运行环境确定保存路径
+            if getattr(sys, 'frozen', False):
+                save_path = os.path.join(os.path.dirname(sys.executable), "update.exe")
+            else:
+                save_path = os.path.join(os.getcwd(), "update.exe")
                 
-                # 启动更新程序
-                import subprocess
-                subprocess.Popen([save_path])
-                sys.exit(0)
-            except Exception as e:
-                QMessageBox.critical(
-                    self.parent,
-                    "错误",
-                    f"启动更新程序失败: {e}\n请手动运行更新程序: {save_path}"
-                )
-    else:
-        QMessageBox.critical(
-            self.parent,
-            "更新失败",
-            f"下载更新失败: {message}\n请稍后重试或联系开发者获取帮助。"
-        )
+            # 创建下载线程
+            downloader = UpdateDownloader(download_url, save_path)
+            
+            # 连接信号
+            downloader.progress_signal.connect(progress_dialog.setValue)
+            downloader.finished_signal.connect(
+                lambda success, msg: self.handle_download_finished(success, msg, save_path, progress_dialog)
+            )
+            
+            # 开始下载
+            downloader.start()
+            progress_dialog.exec_()
+            
+        except Exception as e:
+            QMessageBox.critical(self.parent, "错误", f"下载更新时发生错误: {e}")
+            
+    def handle_download_finished(self, success, message, save_path, progress_dialog):
+        """处理下载完成"""
+        progress_dialog.close()
+        
+        if success:
+            reply = QMessageBox.question(
+                self.parent,
+                '更新准备就绪',
+                '更新已下载完成，点击"确定"开始安装。\n安装过程中程序将自动关闭，安装完成后请重新启动程序。',
+                QMessageBox.Yes | QMessageBox.No
+            )
+            
+            if reply == QMessageBox.Yes:
+                try:
+                    # 显示最后的提示
+                    QMessageBox.information(
+                        self.parent,
+                        "开始更新",
+                        "程序即将关闭并开始安装更新，请稍候...",
+                        QMessageBox.Ok
+                    )
+                    
+                    # 启动更新程序
+                    import subprocess
+                    subprocess.Popen([save_path])
+                    sys.exit(0)
+                except Exception as e:
+                    QMessageBox.critical(
+                        self.parent,
+                        "错误",
+                        f"启动更新程序失败: {e}\n请手动运行更新程序: {save_path}"
+                    )
+        else:
+            QMessageBox.critical(
+                self.parent,
+                "更新失败",
+                f"下载更新失败: {message}\n请稍后重试或联系开发者获取帮助。"
+            )
