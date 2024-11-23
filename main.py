@@ -9,6 +9,7 @@ import time
 import importlib
 import app
 from win32com.client import Dispatch
+from PyQt5.QtWidgets import QApplication, QLabel
 
 
 
@@ -89,7 +90,7 @@ if __name__ == "__main__":
         # 延迟创建快捷方式
         QTimer.singleShot(3000, create_desktop_shortcut)
         
-        app_instance.exec_()
+        app_instance.app.exec_()  # 修改这里
             
     except Exception as e:
         print(f"启动过程出错: {e}")

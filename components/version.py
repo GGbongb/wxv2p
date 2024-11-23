@@ -1,4 +1,4 @@
-VERSION = "1.2.2"  # 当前版本号
+VERSION = "1.2.1"  # 当前版本号
 
 class Version:
     @staticmethod
