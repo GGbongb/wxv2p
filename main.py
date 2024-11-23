@@ -11,6 +11,8 @@ import requests
 import subprocess
 import app
 from win32com.client import Dispatch
+import logger
+
 
 def create_desktop_shortcut():
     """创建桌面快捷方式"""
@@ -107,13 +109,15 @@ if __name__ == "__main__":
         # 检查更新
         from components.update_manager import UpdateManager
         update_manager = UpdateManager()
-        latest_version, download_url = update_manager.check_for_updates()
+        update_info = update_manager.check_for_updates()
         
-        if latest_version and update_manager.prompt_update(latest_version):
-            update_manager.download_and_install(download_url)
+        if update_info:
+            new_version, download_url, release_notes = update_info
+            if update_manager.prompt_update(new_version, release_notes):
+                update_manager.download_and_install(download_url)
             
     except Exception as e:
-        print(f"启动过程出错: {e}")
+        logger.error(f"启动过程出错: {e}")
     
     # 运行主程序
     app.run()

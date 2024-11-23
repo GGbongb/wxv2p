@@ -5,6 +5,8 @@ import logging
 from .network_manager import NetworkManager
 import os
 import sys
+from .version import Version, VERSION
+from urllib.parse import quote
 
 logger = logging.getLogger(__name__)
 
@@ -43,38 +45,45 @@ class UpdateManager:
     def __init__(self, parent=None):
         self.parent = parent
         self.network_manager = NetworkManager()
-        self.current_version = "0.1"
+        self.current_version = VERSION
         
     def check_for_updates(self):
         """检查更新"""
         try:
-            # 使用 COS 更新 URL
-            update_url = self.network_manager.update_url
-            if not update_url:
+            base_url = self.network_manager.update_url
+            if not base_url:
                 logger.error("无法获取更新 URL")
-                return None, None
+                return None
                 
-            # 获取更新信息
+            # 获取版本信息
             response = requests.get(
-                f"{update_url}/version.json",  # 版本信息文件
+                f"{base_url}/version.json",
                 timeout=10
             )
             
             if response.status_code == 200:
                 data = response.json()
-                if data.get("version") > self.current_version:
-                    return data.get("version"), data.get("download_url")
+                new_version = data.get("version")
+                
+                if Version.compare_versions(new_version, self.current_version) > 0:
+                    # URL 编码处理文件路径
+                    file_path = quote(data.get("file_path", ""))
+                    download_url = f"{base_url}/{file_path}"
+                    
+                    notes = "\n".join(data.get("release_notes", []))
+                    return (new_version, download_url, notes)
                     
         except Exception as e:
             logger.error(f"检查更新时发生错误: {str(e)}")
-        return None, None
+        return None
         
-    def prompt_update(self, new_version):
+    def prompt_update(self, new_version, release_notes):
         """提示用户更新"""
+        message = f"发现新版本 {new_version}\n\n更新内容：\n{release_notes}\n\n是否现在更新？"
         reply = QMessageBox.question(
             self.parent,
             "发现新版本",
-            f"发现新版本 {new_version}，是否现在更新？",
+            message,
             QMessageBox.Yes | QMessageBox.No
         )
         return reply == QMessageBox.Yes
