@@ -343,7 +343,7 @@ class StatusDisplay(QWidget):
         layout.setContentsMargins(5, 0, 5, 0)
         
         # 版本信息
-        self.version_label = QLabel("v1.0.0")
+        self.version_label = QLabel("v1.2.2")
         self.version_label.setStyleSheet("""
             QLabel {
                 color: #7f8c8d;

@@ -90,7 +90,7 @@ class VideoDragDropWindow(QMainWindow):
         hint_layout.setContentsMargins(0, 50, 0, 50)  # 设置上边距
         
         # 添加提示信息
-        self.drop_hint = QLabel("\n本软件可以从微信聊天记录录屏文件提取连续内容的截图，并可以导出为PDF或图片，无需手动截图，极大节省时间，是律师处理微信聊天证据的最佳效率工具。\n\n使用时注意：\n\n1. 对微信聊天录屏时，应匀速缓慢滑动录屏，否则导出效果不好；\n\n2. 录屏时应当从上往下翻动。", self)
+        self.drop_hint = QLabel("\n本软件可以从微信聊天记录录屏文件提取连续内容的截图，并可以导出为PDF或图片，无需手动截图，极大节省时间，是律师处理微信聊天证据的最佳效率工具。\n\n使用前注意：\n\n1. 对微信聊天录屏时，应匀速缓慢滑动录屏，否则导出效果不好；\n\n2. 录屏时应当从上往下翻动。", self)
         self.drop_hint.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
         self.drop_hint.setStyleSheet("""
             QLabel {

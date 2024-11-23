@@ -4,7 +4,7 @@ block_cipher = None
 
 author = '李洋'
 email = 'liyo84683@gmail.com'
-version = '1.0.0'
+version = '1.2.1'
 copyright = 'Copyright (C) 2024 李洋'
 
 
