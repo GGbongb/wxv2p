@@ -9,7 +9,7 @@ import os
 from tools.utils import resource_path
 from .export_options_page import ExportOptionsPage  # 添加这行导入
 
-logger = logging.getLogger(__name__)
+#logger = logging.getLogger(__name__)
 
 class PricingPlanPage(QDialog):
     def __init__(self, parent=None):
@@ -193,7 +193,7 @@ class PricingPlanPage(QDialog):
     
     def verify_activation_code(self):
         """验证激活码"""
-        logger.debug("开始验证激活码")
+        #logger.debug("开始验证激活码")
         activation_code = self.activation_input.text().strip()
         if not activation_code:
             QMessageBox.warning(self, "提示", "请输入从客服获取的激活码激活本软件")
@@ -203,7 +203,7 @@ class PricingPlanPage(QDialog):
         success, message = self.activation_manager.activate(activation_code)
         
         if success:
-            logger.debug("激活成功")
+            #logger.debug("激活成功")
             QMessageBox.information(self, "成功", message)
             
             try:
@@ -214,9 +214,10 @@ class PricingPlanPage(QDialog):
                 # 自动开始导出
                 self.parent().generate_pdf()
                 
-                logger.debug("成功更新状态并开始生成PDF")
+                #logger.debug("成功更新状态并开始生成PDF")
             except Exception as e:
-                logger.error(f"更新状态时发生错误: {str(e)}", exc_info=True)
+               # logger.error(f"更新状态时发生错误: {str(e)}", exc_info=True)
+                pass
         else:
             QMessageBox.warning(self, "错误", message)
     

@@ -8,19 +8,19 @@ from .activation_manager import ActivationManager
 import logging
 from tools.utils import resource_path
 
-logger = logging.getLogger(__name__)
+#logger = logging.getLogger(__name__)
 
 class ExportOptionsPage(QWidget):
     def __init__(self, parent=None):
-        logger.debug(f"初始化 ExportOptionsPage, parent: {parent}")
+        #logger.debug(f"初始化 ExportOptionsPage, parent: {parent}")
         super().__init__(parent)
         self.activation_manager = ActivationManager()
         self.init_ui()
-        logger.debug("ExportOptionsPage 初始化完成")
+        #logger.debug("ExportOptionsPage 初始化完成")
         # 确保窗口尺寸正确
         if parent:
             self.setFixedSize(parent.size())
-            logger.debug(f"设置窗口尺寸: {parent.size()}")
+            #logger.debug(f"设置窗口尺寸: {parent.size()}")
         
     def init_ui(self):
         # 设置整个窗口的背景色
@@ -164,27 +164,28 @@ class ExportOptionsPage(QWidget):
 
     def export_images(self):
         """导出所有图片到选择的文件夹"""
-        logger.debug("开始处理图片导出")
+        #logger.debug("开始处理图片导出")
         from components.feature_guard import FeatureGuard
         
         # 检查功能使用权限
         if not FeatureGuard.can_use_premium_features():
-            logger.debug("无导出权限，显示激活弹窗")
+            #logger.debug("无导出权限，显示激活弹窗")
             from .pricing_plan_page import PricingPlanPage
             pricing_page = PricingPlanPage(self)
             pricing_page.exec_()
             return
             
         # 有权限，继续导出流程
-        logger.debug("有导出权限，开始导出图片")
+        #logger.debug("有导出权限，开始导出图片")
         try:
             self.generate_images()
         except Exception as e:
-            logger.error(f"导出图片时发生错误: {str(e)}", exc_info=True)
+            #logger.error(f"导出图片时发生错误: {str(e)}", exc_info=True)
+            pass
 
     def generate_images(self):
         """生成图片文件"""
-        logger.debug("开始导出图片文件")
+        #logger.debug("开始导出图片文件")
         from components.image_viewer import ImageViewer
         
         if not ImageViewer.processed_images:
@@ -201,7 +202,7 @@ class ExportOptionsPage(QWidget):
             )
             
             if not folder_path:  # 用户取消选择
-                logger.debug("用户取消了保存操作")
+                #logger.debug("用户取消了保存操作")
                 return
                 
             # 创建以当前时间命名的子文件夹
@@ -225,10 +226,11 @@ class ExportOptionsPage(QWidget):
                 "导出成功",
                 f"已成功导出 {total} 张图片到:\n{export_folder}"
             )
-            logger.debug(f"成功导出 {total} 张图片到 {export_folder}")
+            #logger.debug(f"成功导出 {total} 张图片到 {export_folder}")
             
         except Exception as e:
-            logger.error(f"导出图片过程中发生错误: {str(e)}", exc_info=True)
+            #logger.error(f"导出图片过程中发生错误: {str(e)}", exc_info=True)
+            pass
             QMessageBox.critical(
                 self,
                 "导出失败",
@@ -237,27 +239,28 @@ class ExportOptionsPage(QWidget):
 
     def export_pdf(self):
         """处理PDF导出按钮点击"""
-        logger.debug("开始处理PDF导出")
+        #logger.debug("开始处理PDF导出")
         from components.feature_guard import FeatureGuard
         
         # 检查功能使用权限
         if not FeatureGuard.can_use_premium_features():
-            logger.debug("无导出权限，显示激活弹窗")
+            #logger.debug("无导出权限，显示激活弹窗")
             from .pricing_plan_page import PricingPlanPage
             pricing_page = PricingPlanPage(self)
             pricing_page.exec_()
             return
             
         # 有权限，继续导出流程
-        logger.debug("已激活，开始生成PDF")
+        #logger.debug("已激活，开始生成PDF")
         try:
             self.generate_pdf()
         except Exception as e:
-            logger.error(f"生成PDF时发生错误: {str(e)}", exc_info=True)
+            # logger.error(f"生成PDF时发生错误: {str(e)}", exc_info=True)
+            pass
 
     def generate_pdf(self):
         """生成PDF文件"""
-        logger.debug("开始生成PDF文件")
+        #logger.debug("开始生成PDF文件")
         try:
             # 获取保存路径
             file_path, _ = QFileDialog.getSaveFileName(
@@ -268,7 +271,7 @@ class ExportOptionsPage(QWidget):
             )
             
             if not file_path:
-                logger.debug("用户取消了保存操作")
+                #logger.debug("用户取消了保存操作")
                 return
                 
             # 生成PDF
@@ -277,19 +280,20 @@ class ExportOptionsPage(QWidget):
                 QMessageBox.warning(self, "警告", "没有可导出的图片！")
                 return
                 
-            logger.debug(f"开始生成PDF，保存路径: {file_path}")
+            #logger.debug(f"开始生成PDF，保存路径: {file_path}")
             pdf_generator = PDFGenerator()
             success, error = pdf_generator.generate_pdf(ImageViewer.processed_images, file_path)
             
             if success:
                 QMessageBox.information(self, "成功", "PDF文件生成成功！")
-                logger.debug("PDF生成成功")
+                #logger.debug("PDF生成成功")
             else:
                 QMessageBox.critical(self, "错误", f"生成PDF时发生错误：\n{error}")
-                logger.error(f"PDF生成失败: {error}")
+                #logger.error(f"PDF生成失败: {error}")
                 
         except Exception as e:
-            logger.error(f"生成PDF过程中发生错误: {str(e)}", exc_info=True)
+            #logger.error(f"生成PDF过程中发生错误: {str(e)}", exc_info=True)
+            pass
             QMessageBox.critical(self, "错误", f"生成PDF时发生错误：\n{str(e)}")
 
     def update_status_label(self):

@@ -6,9 +6,9 @@ import os
 from tools.utils import resource_path
 import logging
 
-logger = logging.getLogger(__name__)
+#logger = logging.getLogger(__name__)
 
-logger = logging.getLogger(__name__)
+
 
 class HoverInfoWidget(QWidget):
     def __init__(self, parent=None):
@@ -190,7 +190,7 @@ class HoverInfoWidget(QWidget):
 
     def activate_code(self):
         """激活码验证处理"""
-        logger.debug("开始激活码验证流程")
+        #logger.debug("开始激活码验证流程")
         from components.activation_manager import ActivationManager
         activation_manager = ActivationManager()
         
@@ -200,12 +200,12 @@ class HoverInfoWidget(QWidget):
             return
             
         success, message = activation_manager.activate(code)
-        logger.debug(f"激活结果: success={success}, message={message}")
+        #logger.debug(f"激活结果: success={success}, message={message}")
         
         if success:
             # 先更新状态
             if hasattr(self, 'main_window'):
-                logger.debug("找到主窗口引用，开始更新状态")
+                #.debug("找到主窗口引用，开始更新状态")
                 self.main_window.update_activation_status()
                 
             # 然后显示成功消息
@@ -213,7 +213,7 @@ class HoverInfoWidget(QWidget):
             
             # 最后安全地隐藏悬浮框
             self.setVisible(False)
-            logger.debug("悬浮框已隐藏")
+            #logger.debug("悬浮框已隐藏")
             
         else:
             QMessageBox.warning(self, "错误", message)
@@ -230,12 +230,12 @@ class HoverInfoWidget(QWidget):
         
         if not global_rect.contains(mouse_pos):
             self.hide()
-            logger.debug("鼠标离开悬浮框区域，隐藏悬浮框")
+            #logger.debug("鼠标离开悬浮框区域，隐藏悬浮框")
 
 class AnimatedPromotionLabel(QLabel):
     def __init__(self, parent=None):
         super().__init__(parent)
-        logger.debug(f"AnimatedPromotionLabel 初始化, parent={parent}")
+        #logger.debug(f"AnimatedPromotionLabel 初始化, parent={parent}")
         
         # 初始化动画
         self.animation = QPropertyAnimation(self, b"pos")
@@ -266,14 +266,14 @@ class AnimatedPromotionLabel(QLabel):
             parent_widget = self
             
             while parent_widget:
-                logger.debug(f"查找主窗口，当前组件: {type(parent_widget)}")
+               # logger.debug(f"查找主窗口，当前组件: {type(parent_widget)}")
                 if isinstance(parent_widget, VideoDragDropWindow):
                     main_window = parent_widget
                     break
                 parent_widget = parent_widget.parent()
                 
             if main_window:
-                logger.debug("成功找到主窗口，创建悬浮框")
+               # logger.debug("成功找到主窗口，创建悬浮框")
                 self.hover_widget = HoverInfoWidget()
                 self.hover_widget.setParent(main_window)
                 self.hover_widget.main_window = main_window
@@ -281,7 +281,7 @@ class AnimatedPromotionLabel(QLabel):
                 self.hover_widget.setWindowFlags(Qt.FramelessWindowHint | Qt.ToolTip | Qt.WindowStaysOnTopHint)
                 self.hover_widget.setAttribute(Qt.WA_TranslucentBackground)
             else:
-                logger.error("未找到主窗口，无法创建悬浮框")
+                #logger.error("未找到主窗口，无法创建悬浮框")
                 return
                 
         # 计算悬浮框位置
@@ -290,7 +290,7 @@ class AnimatedPromotionLabel(QLabel):
         
         self.hover_widget.move(pos)
         self.hover_widget.show()
-        logger.debug("显示悬浮框")
+        #logger.debug("显示悬浮框")
         
     def leaveEvent(self, event):
         """鼠标离开标签"""
@@ -303,11 +303,11 @@ class AnimatedPromotionLabel(QLabel):
             
             if not hover_widget_rect.contains(mouse_pos):
                 self.hover_widget.hide()
-                logger.debug("隐藏悬浮框")
+                #logger.debug("隐藏悬浮框")
 
     def start_animation(self):
         """开始动画效果"""
-        logger.debug("开始促销标签动画")
+       # logger.debug("开始促销标签动画")
         current_pos = self.pos()
         
         # 设置动画起始和结束位置
@@ -323,7 +323,7 @@ class AnimatedPromotionLabel(QLabel):
         
     def stop_animation(self):
         """停止动画"""
-        logger.debug("停止促销标签动画")
+        #logger.debug("停止促销标签动画")
         if self.animation.state() == QPropertyAnimation.Running:
                 self.animation.stop()
 
@@ -376,10 +376,10 @@ class StatusDisplay(QWidget):
         from components.feature_guard import FeatureGuard
         
         if FeatureGuard.can_use_premium_features():
-            logger.debug("检测到有效激活，启动倒计时")
+            #logger.debug("检测到有效激活，启动倒计时")
             self.timer.start(1000)  # 每秒更新一次
         else:
-            logger.debug("未激活状态，停止倒计时")
+            #logger.debug("未激活状态，停止倒计时")
             self.timer.stop()
             # 更新为未激活状态显示
             self.update_inactive_status()
@@ -404,7 +404,7 @@ class StatusDisplay(QWidget):
 
     def update_status(self, is_activated):
         """更新状态显示"""
-        logger.debug(f"StatusDisplay.update_status 被调用: is_activated={is_activated}")
+        #logger.debug(f"StatusDisplay.update_status 被调用: is_activated={is_activated}")
         
         # 更新状态后检查是否需要启动定时器
         self.check_and_start_timer()
@@ -414,7 +414,7 @@ class StatusDisplay(QWidget):
         remaining_days, remaining_hours, remaining_minutes, remaining_seconds = activation_manager.get_remaining_time()
         activation_type = activation_manager.activation_info.get('type') if activation_manager.activation_info else None
         
-        logger.debug(f"更新状态显示: 已激活={is_activated}, 类型={activation_type}")
+        #logger.debug(f"更新状态显示: 已激活={is_activated}, 类型={activation_type}")
         
         # 更新状态显示
         if is_activated:
@@ -433,7 +433,7 @@ class StatusDisplay(QWidget):
                         border-radius: 4px;
                     }
                 """
-                logger.debug("已设置为永久版状态")
+                #logger.debug("已设置为永久版状态")
             elif activation_type == 0:  # 7天体验期
                 self.promotion_label.show()
                 self.promotion_label.setText("限时折扣：7天体验期内购买永久版可享受10元优惠，仅需40元")
@@ -481,7 +481,7 @@ class StatusDisplay(QWidget):
         # 强制更新UI
         self.activation_label.update()
         self.update()
-        logger.debug(f"状态显示已更新: {status_text}")
+        #logger.debug(f"状态显示已更新: {status_text}")
 
     def update_countdown(self):
         """更新倒计时显示"""
@@ -511,7 +511,7 @@ class StatusDisplay(QWidget):
             """
             self.activation_label.setText(status_text)
             self.activation_label.setStyleSheet(style)
-            logger.debug("激活已过期，更新为未激活状态")
+            #logger.debug("激活已过期，更新为未激活状态")
             return
             
         # 以下是未过期的情况
@@ -554,4 +554,4 @@ class StatusDisplay(QWidget):
             
         self.activation_label.setText(status_text)
         self.activation_label.setStyleSheet(style)
-        logger.debug(f"更新倒计时显示: {status_text}")
+        #logger.debug(f"更新倒计时显示: {status_text}")

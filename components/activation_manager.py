@@ -13,11 +13,11 @@ from .activation_dialog import ActivationDialog
 from PyQt5.QtWidgets import QApplication
 import asyncio
 
-logger = logging.getLogger(__name__)
+#logger = logging.getLogger(__name__)
 
 class ActivationManager:
     def __init__(self):
-        logger.debug("初始化 ActivationManager")
+        #logger.debug("初始化 ActivationManager")
         self.encrypted_codes_file = resource_path("data/encrypted_codes.dat")
         self.secret_key = "your_secret_key_here"
         self.registry_path = r"Software\WxV2P"
@@ -34,7 +34,7 @@ class ActivationManager:
             winreg.CloseKey(key)
             return json.loads(value)
         except Exception as e:
-            logger.debug(f"加载激活信息失败: {e}")
+           # logger.debug(f"加载激活信息失败: {e}")
             return None
     
     def save_activation_info(self, info):
@@ -45,13 +45,14 @@ class ActivationManager:
             # 保存激活信息
             winreg.SetValueEx(key, "ActivationInfo", 0, winreg.REG_SZ, json.dumps(info))
             winreg.CloseKey(key)
-            logger.debug("激活信息已保存到注册表")
+            #logger.debug("激活信息已保存到注册表")
         except Exception as e:
-            logger.error(f"保存激活信息失败: {e}")
+            #logger.error(f"保存激活信息失败: {e}")
+            pass
     
     def activate(self, code):
         """激活软件"""
-        logger.debug(f"开始激活，激活码: {code}")
+        #logger.debug(f"开始激活，激活码: {code}")
         
         # 创建并显示进度对话框
         dialog = ActivationDialog(QApplication.activeWindow())
@@ -88,7 +89,7 @@ class ActivationManager:
             return True, "成功升级到永久版" if is_upgrade else "激活成功"
             
         except Exception as e:
-            logger.error(f"激活过程中发生错误: {str(e)}", exc_info=True)
+            #logger.error(f"激活过程中发生错误: {str(e)}", exc_info=True)
             dialog.close()
             return False, f"激活失败: {str(e)}"
     
@@ -147,7 +148,7 @@ class ActivationManager:
             return days, hours, minutes, seconds
         
         except Exception as e:
-            print(f"Error: {e}")
+            #print(f"Error: {e}")
             return 0, 0, 0, 0
 
 
@@ -169,8 +170,8 @@ class ActivationManager:
             winreg.DeleteKey(winreg.HKEY_CURRENT_USER, self.registry_path)
             # 清空当前激活信息
             self.activation_info = None
-            logger.debug("激活信息已清除")
+            #logger.debug("激活信息已清除")
             return True
         except WindowsError as e:
-            logger.error(f"清除激活信息失败: {e}")
+            #logger.error(f"清除激活信息失败: {e}")
             return False

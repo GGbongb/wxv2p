@@ -11,12 +11,12 @@ from components.video_process_thread import VideoProcessThread
 from .status_display import StatusDisplay
 from datetime import datetime, timedelta
 
-logger = logging.getLogger(__name__)
+#logger = logging.getLogger(__name__)
 
 class VideoDragDropWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("微信聊天记录转图片工具")
+        self.setWindowTitle("V2PP-微信聊天录屏导出截图工具")
         self.setGeometry(100, 100, 1920, 1500)
 
         # 创建中央部件
@@ -52,15 +52,15 @@ class VideoDragDropWindow(QMainWindow):
         self.setFocusPolicy(Qt.StrongFocus)
 
     def update_activation_status(self):
-        logger.debug("VideoDragDropWindow.update_activation_status 被调用")
+        #.debug("VideoDragDropWindow.update_activation_status 被调用")
         from components.activation_manager import ActivationManager
         activation_manager = ActivationManager()
         
         is_activated = activation_manager.is_activated()
-        logger.debug(f"获取到激活状态: {is_activated}")
+        #logger.debug(f"获取到激活状态: {is_activated}")
         
         self.status_display.update_status(is_activated)
-        logger.debug("状态显示更新完成")
+        #logger.debug("状态显示更新完成")
 
     def init_drag_drop_ui(self):
         # 创建一个容器用于文字显示
@@ -172,7 +172,7 @@ class VideoDragDropWindow(QMainWindow):
             QMessageBox.warning(self, "警告", "请先拖入视频文件！")
             return
         
-        logger.debug(f"开始处理视频: {self.video_path}")
+       # logger.debug(f"开始处理视频: {self.video_path}")
         
         # 清空内容区域而不是整个布局
         for i in reversed(range(self.content_layout.count())): 
@@ -188,7 +188,7 @@ class VideoDragDropWindow(QMainWindow):
         progress_layout.addStretch(1)
         self.content_layout.addLayout(progress_layout)
         
-        logger.debug(f"准备展示进度条")
+        #logger.debug(f"准备展示进度条")
         
         self.animation = QPropertyAnimation(self.progress_bar, b"value")
         self.animation.setDuration(1000)
@@ -209,9 +209,9 @@ class VideoDragDropWindow(QMainWindow):
         #     self.log_display.append(message)
 
         #self.thread.log_message.connect(display_log)
-        logger.debug("启动视频处理线程")    
+        #logger.debug("启动视频处理线程")    
         self.thread.start()
-        logger.debug("视频处理线程已启动")
+        #logger.debug("视频处理线程已启动")
 
     def update_progress(self, value):
         self.animation.setStartValue(self.progress_bar.value())
@@ -226,21 +226,21 @@ class VideoDragDropWindow(QMainWindow):
 
     def switch_to_export_page(self):
         """处理切换到导出页面的信号"""
-        logger.debug("开始切换到导出页面")
+       # logger.debug("开始切换到导出页面")
         try:
             from components.export_options_page import ExportOptionsPage
             export_page = ExportOptionsPage(self)
-            logger.debug("创建 ExportOptionsPage 成功")
+            #logger.debug("创建 ExportOptionsPage 成功")
             
             self.setCentralWidget(export_page)
-            logger.debug("设置 centralWidget 成功")
+           # logger.debug("设置 centralWidget 成功")
             
             # 确保状态栏可见
             self.status_display.show()
             
             # 更新激活状态
             self.update_activation_status()
-            logger.debug("更新激活状态显示")
+           # logger.debug("更新激活状态显示")
             
             # 强制更新UI
             self.status_display.update()
@@ -248,10 +248,11 @@ class VideoDragDropWindow(QMainWindow):
             
             # 确保窗口保持显示
             self.show()
-            logger.debug("调用 show() 方法")
+           # logger.debug("调用 show() 方法")
             
         except Exception as e:
-            logger.error(f"切换页面时发生错误: {str(e)}", exc_info=True)
+           # logger.error(f"切换页面时发生错误: {str(e)}", exc_info=True)
+           pass
 
     def show_image_viewer(self, frames):
         """显示图片查看器"""

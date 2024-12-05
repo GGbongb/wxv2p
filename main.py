@@ -25,10 +25,10 @@ def create_desktop_shortcut():
             app_path = sys.executable
         else:
             # 开发环境路径
-            app_path = os.path.abspath("dist/WX聊天录屏转图片.exe")
+            app_path = os.path.abspath("dist/wxv2p.exe")
         
         # 快捷方式路径
-        shortcut_path = os.path.join(desktop_path, "WX聊天录屏转图片.lnk")
+        shortcut_path = os.path.join(desktop_path, "wxv2p.lnk")
         
         # 如果快捷方式不存在，则创建
         if not os.path.exists(shortcut_path):
@@ -41,9 +41,11 @@ def create_desktop_shortcut():
                 shortcut.save()
                 print("桌面快捷方式创建成功")
             except Exception as e:
-                print(f"创建快捷方式失败: {e}")
+                #print(f"创建快捷方式失败: {e}")
+                pass
     except Exception as e:
-        print(f"创建快捷方式时发生错误: {e}")
+        #print(f"创建快捷方式时发生错误: {e}")
+        pass
 
 def check_for_file_changes():
     """检查文件变化（仅在开发环境中使用）"""
@@ -57,7 +59,7 @@ def check_for_file_changes():
             time.sleep(1)  # 每秒检查一次
             current_mtime = os.path.getmtime('app.py')
             if current_mtime != last_mtime:
-                print("检测到文件变化，正在重新加载...")
+               # print("检测到文件变化，正在重新加载...")
                 importlib.reload(app)
                 last_mtime = current_mtime
                 return True
@@ -69,7 +71,7 @@ def check_for_file_changes():
 if __name__ == "__main__":
     try:
         # 延迟导入模块，只在需要时导入
-        print("启动主程序...")
+        #print("启动主程序...")
         app_instance = app.run(show_window=True)  # 先显示主窗口
         
         # 在后台线程中检查更新
@@ -93,7 +95,8 @@ if __name__ == "__main__":
         app_instance.app.exec_()  # 修改这里
             
     except Exception as e:
-        print(f"启动过程出错: {e}")
+        #print(f"启动过程出错: {e}")
+        pass
     # 在开发环境中检查文件变化
     if not getattr(sys, 'frozen', False):
         while True:

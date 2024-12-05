@@ -9,7 +9,7 @@ from .version import Version, VERSION
 from urllib.parse import quote
 
 
-logger = logging.getLogger(__name__)
+#logger = logging.getLogger(__name__)
 
 class UpdateDownloader(QThread):
     """更新下载线程"""
@@ -61,10 +61,10 @@ class UpdateDownloader(QThread):
             self.finished_signal.emit(True, "下载完成")
             
         except requests.exceptions.RequestException as e:
-            print(f"下载请求错误: {e}")
+            #print(f"下载请求错误: {e}")
             self.finished_signal.emit(False, f"下载请求错误: {str(e)}")
         except Exception as e:
-            print(f"下载更新时发生错误: {e}")
+            #print(f"下载更新时发生错误: {e}")
             self.finished_signal.emit(False, str(e))
 
 class UpdateManager:
@@ -78,47 +78,50 @@ class UpdateManager:
 
     def check_for_updates(self):
         """检查更新"""
-        print("开始检查更新...")
+        #print("开始检查更新...")
         try:
             base_url = self.network_manager.update_url
             if not base_url:
-                print("无法获取更新 URL")
+                #print("无法获取更新 URL")
                 return None
                 
-            print(f"正在获取版本信息...")
+            #print(f"正在获取版本信息...")
             response = requests.get(
                 f"{base_url}/version.json",
                 timeout=10
             )
-            print(f"服务器响应: {response.status_code}")
+           # print(f"服务器响应: {response.status_code}")
             
             if response.status_code == 200:
                 try:
                     data = response.json()
-                    print(f"版本信息: {data}")
+                    #print(f"版本信息: {data}")
                     new_version = data.get("version")
                     
                     if not new_version:
-                        print("未找到版本信息")
+                        #print("未找到版本信息")
                         return None
                         
-                    print(f"当前版本: {self.current_version}, 最新版本: {new_version}")
+                    #print(f"当前版本: {self.current_version}, 最新版本: {new_version}")
                     
                     if Version.compare_versions(new_version, self.current_version) > 0:
                         file_path = quote(data.get("file_path", ""))
                         download_url = f"{base_url}/{file_path}"
                         notes = "\n".join(data.get("release_notes", []))
-                        print(f"发现新版本，下载地址: {download_url}")
+                        #print(f"发现新版本，下载地址: {download_url}")
                         return (new_version, download_url, notes)
                     else:
-                        print("当前已是最新版本")
+                        #print("当前已是最新版本")
+                        pass
                         
                 except ValueError as e:
-                    print(f"解析版本信息失败: {e}")
-                    print(f"响应内容: {response.text}")
+                    #print(f"解析版本信息失败: {e}")
+                    #print(f"响应内容: {response.text}")
+                    pass
                     
         except Exception as e:
-            print(f"检查更新时发生错误: {str(e)}")
+            #print(f"检查更新时发生错误: {str(e)}")
+            pass
             
         return None
 
@@ -142,7 +145,7 @@ class UpdateManager:
                 save_dir = os.getcwd()
             
             save_path = os.path.join(save_dir, "update.exe")
-            print(f"更新文件将保存到: {save_path}")
+            #print(f"更新文件将保存到: {save_path}")
             
             # 创建下载线程
             downloader = UpdateDownloader(download_url, save_path)
@@ -158,7 +161,7 @@ class UpdateManager:
             progress_dialog.exec_()
             
         except Exception as e:
-            print(f"下载过程出错: {e}")
+            #print(f"下载过程出错: {e}")
             QMessageBox.critical(self.parent, "错误", f"下载更新时发生错误: {e}")
             
     def handle_download_finished(self, success, message, save_path, progress_dialog):
@@ -197,7 +200,7 @@ class UpdateManager:
                     subprocess.Popen([save_path], shell=True)  # 使用 shell=True
                     sys.exit(0)
                 except Exception as e:
-                    print(f"启动更新程序失败: {e}")
+                    #print(f"启动更新程序失败: {e}")
                     QMessageBox.critical(
                         self.parent,
                         "错误",
@@ -292,7 +295,7 @@ class UpdateManager:
                     subprocess.Popen([save_path], shell=True)  # 使用 shell=True
                     sys.exit(0)
                 except Exception as e:
-                    print(f"启动更新程序失败: {e}")
+                    #print(f"启动更新程序失败: {e}")
                     QMessageBox.critical(
                         self.parent,
                         "错误",

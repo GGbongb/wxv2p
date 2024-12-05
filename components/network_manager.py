@@ -5,7 +5,7 @@ import logging
 from typing import Optional, Dict, Any
 from tools.utils import resource_path
 
-logger = logging.getLogger(__name__)
+#logger = logging.getLogger(__name__)
 
 class NetworkManager:
     def __init__(self):
@@ -35,7 +35,7 @@ class NetworkManager:
             return decrypted_url.decode()
             
         except Exception as e:
-            logger.error(f"获取 {url_type} URL 失败: {str(e)}")
+            #logger.error(f"获取 {url_type} URL 失败: {str(e)}")
             return ""
         
     def check_network(self) -> bool:
@@ -69,8 +69,8 @@ class NetworkManager:
                 return False, data.get("message", "激活失败"), None
                 
         except requests.RequestException as e:
-            logger.error(f"网络请求错误: {str(e)}")
+           # logger.error(f"网络请求错误: {str(e)}")
             return False, "网络请求失败，请稍后重试", None
         except Exception as e:
-            logger.error(f"激活过程出错: {str(e)}")
+            #logger.error(f"激活过程出错: {str(e)}")
             return False, "激活过程出现错误", None

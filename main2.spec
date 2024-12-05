@@ -37,23 +37,24 @@ a = Analysis(
         'winreg',
         'pythoncom',
         'pywintypes',
-		'cryptography',
-		'logging'
+		'cryptography'
     ],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
+    excludes=['logging'],  # 排除日志模块
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
     cipher=block_cipher,
     noarchive=False,
 )
 
+# 添加 win32com 相关文件
 from PyInstaller.utils.hooks import collect_dynamic_libs
 binaries = []
 binaries.extend(collect_dynamic_libs('win32com'))
 
-pyz = PYZ(a.pure)
+pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
 exe = EXE(
     pyz,
@@ -63,7 +64,7 @@ exe = EXE(
     a.datas,
     binaries,
     [],
-    name='V2PP',
+    name='微信聊天录屏转图片',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
